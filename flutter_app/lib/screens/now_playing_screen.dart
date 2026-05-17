@@ -72,7 +72,7 @@ class _ErrorState extends StatelessWidget {
                   context.read<RadioProvider>().fetchConfig(
                         const String.fromEnvironment(
                           'API_URL',
-                          defaultValue: 'http://172.20.10.3:3000',
+                          defaultValue: 'https://vasfm-online.vercel.app',
                         ),
                       );
                 },

@@ -21,28 +21,32 @@ class AboutScreen extends StatelessWidget {
             // Radio Station Logo/Icon
             Center(
               child: Container(
-                width: 120,
-                height: 120,
+                width: 150,
+                height: 150,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF6A229C),
-                      const Color(0xFF6A229C).withOpacity(0.7),
-                    ],
-                  ),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6A229C).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: const Color(0xFF6A229C).withOpacity(0.4),
+                      blurRadius: 25,
+                      offset: const Offset(0, 15),
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.radio,
-                  size: 60,
-                  color: Colors.white,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Image.asset(
+                    'assets/logo-512.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.radio,
+                        size: 80,
+                        color: Color(0xFF6A229C),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),

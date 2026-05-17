@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // You can change this to your DigitalOcean App Platform URL
     const String apiUrl = String.fromEnvironment(
       'API_URL',
-      defaultValue: 'http://172.20.10.3:3000',
+      defaultValue: 'https://vasfm-online.vercel.app',
     );
 
     // Small delay to show splash screen
@@ -64,23 +64,33 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               // App Icon/Logo
               Container(
-                width: 120,
-                height: 120,
+                width: 150,
+                height: 150,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 25,
+                      offset: const Offset(0, 15),
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.radio,
-                  size: 70,
-                  color: const Color(0xFF6A229C),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Image.asset(
+                    'assets/logo-512.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to icon if image not found
+                      return const Icon(
+                        Icons.radio,
+                        size: 80,
+                        color: Color(0xFF6A229C),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 30),
