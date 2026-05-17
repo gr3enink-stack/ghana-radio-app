@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
+// Listener tracking
+const activeListeners = new Map(); // deviceId -> lastHeartbeat
+
 // Default configuration
 const defaultConfig = {
   stationName: 'My Radio Station',
@@ -55,6 +58,50 @@ function writeConfig(config) {
     return false;
   }
 }
+
+// ==================== LISTENER TRACKING ====================
+
+// Heartbeat endpoint - app calls this every 30 seconds while playing
+app.post('/api/listener/heartbeat', (req, res) => {
+  const { deviceId, stationName } = req.body;
+  
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
+  }
+
+  // Update or add listener
+  activeListeners.set(deviceId, {
+    lastHeartbeat: new Date().toISOString(),
+    stationName: stationName || 'Unknown',
+    deviceType: req.body.deviceType || 'mobile'
+  });
+
+  res.json({ status: 'ok', message: 'Heartbeat received' });
+});
+
+// Get active listener count
+app.get('/api/listeners', (req, res) => {
+  const now = new Date();
+  const timeout = 60 * 1000; // 1 minute timeout
+  
+  // Remove stale listeners (no heartbeat in last 60 seconds)
+  for (const [deviceId, data] of activeListeners.entries()) {
+    const lastBeat = new Date(data.lastHeartbeat);
+    if (now - lastBeat > timeout) {
+      activeListeners.delete(deviceId);
+    }
+  }
+
+  const listenerList = Array.from(activeListeners.entries()).map(([id, data]) => ({
+    deviceId: id,
+    ...data
+  }));
+
+  res.json({
+    activeListeners: activeListeners.size,
+    listeners: listenerList
+  });
+});
 
 // ==================== PUBLIC API ENDPOINTS ====================
 
@@ -174,6 +221,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve admin panel for any other routes
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privacy-policy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'terms-of-service.html'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'index.html'));
 });

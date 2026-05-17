@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Station Admin Panel</title>
+    <title>VAS FM Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -11,95 +13,245 @@
             box-sizing: border-box;
         }
 
+        :root {
+            /* Brand Colors */
+            --primary: #6A229C;
+            --primary-dark: #5A1D87;
+            --primary-light: #7B2FB5;
+            --accent: #FCDE2B;
+            --success: #587414;
+            --danger: #BE1013;
+            --error: #841C25;
+            --live: #EE2129;
+            --text-secondary: #34380E;
+            
+            /* Light Theme (Default) */
+            --bg-primary: #F9FAFB;
+            --bg-secondary: #E8DEF8;
+            --bg-card: #FFFFFF;
+            --bg-input: #F5F5F5;
+            --text-primary: #2c3e50;
+            --text-heading: #6A229C;
+            --border-color: rgba(52, 56, 14, 0.2);
+            --shadow-color: rgba(106, 34, 156, 0.15);
+            --glow-primary: rgba(106, 34, 156, 0.2);
+            --glow-accent: rgba(252, 222, 43, 0.3);
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --bg-primary: #371348;
+            --bg-secondary: #6A229C;
+            --bg-card: rgba(255, 255, 255, 0.08);
+            --bg-input: rgba(255, 255, 255, 0.05);
+            --text-primary: #FFFFFF;
+            --text-heading: #FFFFFF;
+            --border-color: rgba(252, 222, 43, 0.3);
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --glow-primary: rgba(106, 34, 156, 0.5);
+            --glow-accent: rgba(252, 222, 43, 0.5);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 20px;
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px var(--glow-accent);
+        }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, var(--glow-accent) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--glow-primary) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(238, 33, 41, 0.08) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgFloat 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Login Section */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
             padding: 20px;
         }
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
+        .login-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid var(--border-color);
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 480px;
             width: 100%;
-            padding: 40px;
+            box-shadow: 0 25px 50px var(--shadow-color);
+            animation: slideUp 0.6s ease;
+            transition: all 0.3s ease;
         }
 
-        .header {
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 32px;
+            box-shadow: 0 10px 30px var(--glow-primary);
+        }
+
+        .login-logo i {
+            font-size: 36px;
+            color: white;
+        }
+
+        .login-title {
+            font-size: 28px;
+            font-weight: 700;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 8px;
+            color: var(--text-heading);
         }
 
-        .header h1 {
-            color: #333;
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: #666;
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 32px;
             font-size: 14px;
+            opacity: 0.8;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .input-group {
+            margin-bottom: 24px;
         }
 
-        label {
+        .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 14px;
+            color: var(--text-primary);
         }
 
-        input[type="text"],
-        input[type="password"],
-        textarea {
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-primary);
+            opacity: 0.5;
+            transition: color 0.3s;
+        }
+
+        input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e1e1e1;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            padding: 14px 16px 14px 48px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--text-primary);
+            transition: all 0.3s;
+            font-family: inherit;
         }
 
-        input[type="text"]:focus,
-        input[type="password"]:focus,
-        textarea:focus {
+        input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent);
+            background: var(--bg-card);
+            box-shadow: 0 0 0 4px var(--glow-accent);
         }
 
-        textarea {
-            resize: vertical;
-            min-height: 80px;
+        input:focus + i {
+            color: var(--accent);
+            opacity: 1;
         }
 
         .btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
         }
 
-        .btn:hover {
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 10px 25px var(--glow-primary);
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 15px 35px var(--glow-primary);
         }
 
-        .btn:active {
+        .btn-primary:active {
             transform: translateY(0);
         }
 
@@ -108,154 +260,458 @@
             cursor: not-allowed;
         }
 
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        /* Dashboard */
+        .dashboard {
             display: none;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            animation: fadeIn 0.6s ease;
         }
 
-        .alert.show {
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .dashboard.active {
             display: block;
         }
 
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .dashboard-header {
+            margin-bottom: 48px;
         }
 
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .dashboard-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-heading);
         }
 
-        #loginSection, #adminSection {
-            display: none;
+        .dashboard-subtitle {
+            color: var(--text-primary);
+            font-size: 16px;
+            opacity: 0.8;
         }
 
-        .active {
-            display: block !important;
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
         }
 
-        .info-box {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 12px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 28px;
+            transition: all 0.3s;
+            animation: slideUp 0.6s ease backwards;
         }
 
-        .info-box p {
-            color: #666;
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px var(--glow-primary);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon.primary { background: rgba(106, 34, 156, 0.2); color: var(--primary); }
+        .stat-icon.success { background: rgba(88, 116, 20, 0.2); color: var(--success); }
+        .stat-icon.warning { background: rgba(252, 222, 43, 0.2); color: var(--accent); }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-heading);
+        }
+
+        .stat-subtitle {
             font-size: 13px;
-            margin-bottom: 5px;
+            color: var(--text-primary);
+            opacity: 0.7;
         }
 
-        .info-box strong {
-            color: #333;
+        /* Form Section */
+        .form-section {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            animation: slideUp 0.6s ease 0.4s backwards;
+            transition: all 0.3s ease;
         }
 
-        .loading {
+        .form-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-heading);
+        }
+
+        .form-subtitle {
+            color: var(--text-primary);
+            margin-bottom: 32px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .form-group label .required {
+            color: var(--live);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding-left: 16px;
+        }
+
+        .form-group textarea {
+            padding: 14px 16px;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            padding: 16px 32px;
+            width: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent);
+        }
+
+        .loading-spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.6s linear infinite;
             margin-right: 8px;
+            vertical-align: middle;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
+        /* Alerts */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert.show {
+            display: flex;
+        }
+
+        .alert-success {
+            background: rgba(88, 116, 20, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(132, 28, 37, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .alert i {
+            font-size: 20px;
+        }
+
+        /* Current Config Display */
         .current-config {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            background: rgba(106, 34, 156, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 32px;
         }
 
-        .current-config h3 {
-            color: #333;
+        .current-config-title {
+            font-size: 14px;
+            font-weight: 600;
             margin-bottom: 12px;
-            font-size: 16px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .config-item {
-            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
             font-size: 14px;
         }
 
         .config-item strong {
-            color: #667eea;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 20px;
+            }
+
+            .dashboard-title {
+                font-size: 32px;
+            }
+
+            .form-section {
+                padding: 24px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(88, 116, 20, 0.15);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success);
+            gap: 6px;
+        }
+
+        .badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .badge.offline {
+            background: rgba(132, 28, 37, 0.15);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .badge.offline::before {
+            background: var(--error);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📻 Radio Admin</h1>
-            <p>Manage your radio station configuration</p>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <!-- Login Screen -->
+    <div id="loginSection" class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <i class="fas fa-broadcast-tower"></i>
+            </div>
+            <h1 class="login-title">VAS FM Admin</h1>
+            <p class="login-subtitle">Manage your radio station configuration</p>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="password">Admin Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" placeholder="Enter admin password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboardSection" class="dashboard">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Dashboard</h1>
+            <p class="dashboard-subtitle">Manage your radio station settings and configuration</p>
         </div>
 
         <div id="alertBox" class="alert"></div>
 
-        <!-- Login Section -->
-        <div id="loginSection" class="active">
-            <h2 style="margin-bottom: 20px; color: #333;">Login</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="password">Admin Password</label>
-                    <input type="password" id="password" placeholder="Enter admin password" required>
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span class="badge" id="listenerBadge">Live</span>
                 </div>
-                <button type="submit" class="btn">Login</button>
-            </form>
+                <div class="stat-value" id="listenerCount">0</div>
+                <div class="stat-subtitle">Active Listeners</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon success">
+                        <i class="fas fa-radio"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="stationNameStat">Loading...</div>
+                <div class="stat-subtitle">Current Station</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="lastUpdate">Loading...</div>
+                <div class="stat-subtitle">Last Updated</div>
+            </div>
         </div>
 
-        <!-- Admin Panel Section -->
-        <div id="adminSection">
-            <div class="info-box">
-                <p><strong>💡 Tip:</strong> Changes take effect immediately when users restart the app.</p>
-            </div>
+        <!-- Configuration Form -->
+        <div class="form-section">
+            <h2 class="form-title">Stream Configuration</h2>
+            <p class="form-subtitle">Update your radio station details and stream URL</p>
 
-            <div id="currentConfigBox" class="current-config">
-                <h3>Current Configuration</h3>
-                <div id="configDisplay"></div>
-            </div>
-
-            <h2 style="margin-bottom: 20px; color: #333;">Update Configuration</h2>
             <form id="configForm">
-                <div class="form-group">
-                    <label for="stationName">Station Name *</label>
-                    <input type="text" id="stationName" placeholder="My Radio Station" required>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Station Name <span class="required">*</span></label>
+                        <input type="text" id="stationName" placeholder="VAS FM Online" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Album Art URL</label>
+                        <input type="text" id="albumArtUrl" placeholder="https://example.com/logo.jpg">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Stream URL <span class="required">*</span></label>
+                        <input type="text" id="streamUrl" placeholder="https://your-icecast-stream.example.com/stream" required>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Description</label>
+                        <textarea id="description" placeholder="Tell listeners about your station..."></textarea>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="streamUrl">Stream URL *</label>
-                    <input type="text" id="streamUrl" placeholder="https://your-icecast-stream.example.com/stream" required>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                 </div>
-
-                <div class="form-group">
-                    <label for="albumArtUrl">Album Art URL (Optional)</label>
-                    <input type="text" id="albumArtUrl" placeholder="https://example.com/artwork.jpg">
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Description (Optional)</label>
-                    <textarea id="description" placeholder="Your favorite internet radio station"></textarea>
-                </div>
-
-                <button type="submit" class="btn" id="saveBtn">
-                    <span id="saveBtnText">Save Configuration</span>
-                </button>
             </form>
-
-            <button onclick="logout()" class="btn" style="margin-top: 15px; background: #666;">Logout</button>
         </div>
     </div>
 
@@ -263,9 +719,40 @@
         const API_BASE = window.location.origin;
         let authToken = localStorage.getItem('radio_admin_token');
 
+        // Theme Toggle Logic
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('admin_theme') || 'light';
+        
+        // Apply saved theme
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        } else {
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('admin_theme', newTheme);
+            
+            // Update icon
+            themeToggle.innerHTML = newTheme === 'dark' 
+                ? '<i class="fas fa-moon"></i>' 
+                : '<i class="fas fa-sun"></i>';
+            
+            // Add rotation animation
+            themeToggle.style.transform = 'scale(1.1) rotate(360deg)';
+            setTimeout(() => {
+                themeToggle.style.transform = '';
+            }, 300);
+        });
+
         // Check if already logged in
         if (authToken) {
-            showAdminPanel();
+            showDashboard();
         }
 
         // Login Form Handler
@@ -276,9 +763,7 @@
             try {
                 const response = await fetch(`${API_BASE}/api/admin/login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password })
                 });
 
@@ -287,8 +772,8 @@
                 if (response.ok) {
                     authToken = data.token;
                     localStorage.setItem('radio_admin_token', authToken);
-                    showAlert('Login successful!', 'success');
-                    showAdminPanel();
+                    showAlert('Welcome back! Login successful.', 'success');
+                    setTimeout(() => showDashboard(), 500);
                 } else {
                     showAlert(data.error || 'Login failed', 'error');
                 }
@@ -302,9 +787,9 @@
             e.preventDefault();
             
             const saveBtn = document.getElementById('saveBtn');
-            const saveBtnText = document.getElementById('saveBtnText');
+            const originalContent = saveBtn.innerHTML;
             saveBtn.disabled = true;
-            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
+            saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
 
             const configData = {
                 stationName: document.getElementById('stationName').value,
@@ -335,22 +820,21 @@
                 showAlert('Network error: ' + error.message, 'error');
             } finally {
                 saveBtn.disabled = false;
-                saveBtnText.textContent = 'Save Configuration';
+                saveBtn.innerHTML = originalContent;
             }
         });
 
-        function showAdminPanel() {
-            document.getElementById('loginSection').classList.remove('active');
-            document.getElementById('adminSection').classList.add('active');
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('active');
             loadCurrentConfig();
+            startListenerTracking();
         }
 
         async function loadCurrentConfig() {
             try {
                 const response = await fetch(`${API_BASE}/api/admin/config`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 if (response.ok) {
@@ -361,29 +845,90 @@
                     document.getElementById('albumArtUrl').value = config.albumArtUrl || '';
                     document.getElementById('description').value = config.description || '';
 
-                    document.getElementById('configDisplay').innerHTML = `
-                        <div class="config-item"><strong>Station:</strong> ${config.stationName || 'N/A'}</div>
-                        <div class="config-item"><strong>Stream:</strong> ${config.streamUrl || 'N/A'}</div>
-                        <div class="config-item"><strong>Updated:</strong> ${new Date(config.updatedAt).toLocaleString()}</div>
-                    `;
+                    // Update stats
+                    document.getElementById('stationNameStat').textContent = config.stationName || 'N/A';
+                    
+                    const updateDate = new Date(config.updatedAt);
+                    document.getElementById('lastUpdate').textContent = updateDate.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
                 }
+
+                // Load listener count
+                await loadListenerCount();
             } catch (error) {
                 console.error('Failed to load config:', error);
             }
         }
 
+        async function loadListenerCount() {
+            try {
+                const response = await fetch(`${API_BASE}/api/listeners`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('listenerCount').textContent = data.activeListeners;
+                    
+                    // Update badge based on listener count
+                    const badge = document.getElementById('listenerBadge');
+                    if (data.activeListeners > 0) {
+                        badge.textContent = 'Live';
+                        badge.classList.remove('offline');
+                    } else {
+                        badge.textContent = 'Offline';
+                        badge.classList.add('offline');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load listeners:', error);
+            }
+        }
+
+        // Auto-refresh listener count every 5 seconds
+        let listenerInterval;
+        function startListenerTracking() {
+            loadListenerCount();
+            listenerInterval = setInterval(loadListenerCount, 5000);
+        }
+
+        function stopListenerTracking() {
+            if (listenerInterval) {
+                clearInterval(listenerInterval);
+            }
+        }
+
         function logout() {
+            console.log('Logging out...');
+            stopListenerTracking();
             authToken = null;
             localStorage.removeItem('radio_admin_token');
-            document.getElementById('adminSection').classList.remove('active');
-            document.getElementById('loginSection').classList.add('active');
+            
+            // Hide dashboard and show login
+            document.getElementById('dashboardSection').classList.remove('active');
+            document.getElementById('loginSection').classList.remove('hidden');
+            
+            // Clear form fields
             document.getElementById('password').value = '';
+            
+            // Hide any alerts
+            const alertBox = document.getElementById('alertBox');
+            alertBox.classList.remove('show');
+            
+            console.log('Logged out successfully');
         }
 
         function showAlert(message, type) {
             const alertBox = document.getElementById('alertBox');
             alertBox.className = `alert alert-${type} show`;
-            alertBox.textContent = message;
+            alertBox.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
 
             setTimeout(() => {
                 alertBox.classList.remove('show');

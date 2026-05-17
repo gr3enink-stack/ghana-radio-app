@@ -1,7 +1,7 @@
 {
-  "stationName": "My Radio Station",
-  "streamUrl": "https://your-icecast-stream.example.com/stream",
-  "albumArtUrl": "",
+  "stationName": "VAS FM Online",
+  "streamUrl": "http://eu7.fastcast4u.com:6182/stream?type=http&nocache=297",
+  "albumArtUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRMQjAioyQOCfP3vxk8GsmtQaHJHo5RJK15Q&s",
   "description": "Your favorite internet radio station",
-  "updatedAt": "2026-05-17T00:00:00.000Z"
+  "updatedAt": "2026-05-17T19:58:40.103Z"
 }
