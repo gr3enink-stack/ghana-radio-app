@@ -1,0 +1,9 @@
+# Radio Configuration Example
+# Copy this file and update with your actual values
+
+{
+  "stationName": "Your Station Name",
+  "streamUrl": "https://your-streaming-server.com:8000/stream",
+  "albumArtUrl": "https://example.com/logo.jpg",
+  "description": "The best music station"
+}

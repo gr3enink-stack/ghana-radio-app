@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Station Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #loginSection, #adminSection {
+            display: none;
+        }
+
+        .active {
+            display: block !important;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .current-config {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .current-config h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .config-item {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .config-item strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📻 Radio Admin</h1>
+            <p>Manage your radio station configuration</p>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="active">
+            <h2 style="margin-bottom: 20px; color: #333;">Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="password">Admin Password</label>
+                    <input type="password" id="password" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+            </form>
+        </div>
+
+        <!-- Admin Panel Section -->
+        <div id="adminSection">
+            <div class="info-box">
+                <p><strong>💡 Tip:</strong> Changes take effect immediately when users restart the app.</p>
+            </div>
+
+            <div id="currentConfigBox" class="current-config">
+                <h3>Current Configuration</h3>
+                <div id="configDisplay"></div>
+            </div>
+
+            <h2 style="margin-bottom: 20px; color: #333;">Update Configuration</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="stationName">Station Name *</label>
+                    <input type="text" id="stationName" placeholder="My Radio Station" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="streamUrl">Stream URL *</label>
+                    <input type="text" id="streamUrl" placeholder="https://your-icecast-stream.example.com/stream" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="albumArtUrl">Album Art URL (Optional)</label>
+                    <input type="text" id="albumArtUrl" placeholder="https://example.com/artwork.jpg">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description (Optional)</label>
+                    <textarea id="description" placeholder="Your favorite internet radio station"></textarea>
+                </div>
+
+                <button type="submit" class="btn" id="saveBtn">
+                    <span id="saveBtnText">Save Configuration</span>
+                </button>
+            </form>
+
+            <button onclick="logout()" class="btn" style="margin-top: 15px; background: #666;">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let authToken = localStorage.getItem('radio_admin_token');
+
+        // Check if already logged in
+        if (authToken) {
+            showAdminPanel();
+        }
+
+        // Login Form Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('radio_admin_token', authToken);
+                    showAlert('Login successful!', 'success');
+                    showAdminPanel();
+                } else {
+                    showAlert(data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showAlert('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // Config Form Handler
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const saveBtnText = document.getElementById('saveBtnText');
+            saveBtn.disabled = true;
+            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
+
+            const configData = {
+                stationName: document.getElementById('stationName').value,
+                streamUrl: document.getElementById('streamUrl').value,
+                albumArtUrl: document.getElementById('albumArtUrl').value,
+                description: document.getElementById('description').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(configData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('Configuration saved successfully!', 'success');
+                    loadCurrentConfig();
+                } else {
+                    showAlert(data.error || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                showAlert('Network error: ' + error.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtnText.textContent = 'Save Configuration';
+            }
+        });
+
+        function showAdminPanel() {
+            document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('adminSection').classList.add('active');
+            loadCurrentConfig();
+        }
+
+        async function loadCurrentConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/config`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const config = await response.json();
+                    
+                    document.getElementById('stationName').value = config.stationName || '';
+                    document.getElementById('streamUrl').value = config.streamUrl || '';
+                    document.getElementById('albumArtUrl').value = config.albumArtUrl || '';
+                    document.getElementById('description').value = config.description || '';
+
+                    document.getElementById('configDisplay').innerHTML = `
+                        <div class="config-item"><strong>Station:</strong> ${config.stationName || 'N/A'}</div>
+                        <div class="config-item"><strong>Stream:</strong> ${config.streamUrl || 'N/A'}</div>
+                        <div class="config-item"><strong>Updated:</strong> ${new Date(config.updatedAt).toLocaleString()}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load config:', error);
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('radio_admin_token');
+            document.getElementById('adminSection').classList.remove('active');
+            document.getElementById('loginSection').classList.add('active');
+            document.getElementById('password').value = '';
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = `alert alert-${type} show`;
+            alertBox.textContent = message;
+
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
