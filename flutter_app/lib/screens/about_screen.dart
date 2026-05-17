@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -144,6 +145,39 @@ class AboutScreen extends StatelessWidget {
                     'Version 1.0.0',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  const SizedBox(height: 24),
+                  
+                  // Legal Links
+                  const Divider(),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Text(
+                      'Legal',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF6A229C),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildLegalButton(
+                        context,
+                        icon: Icons.shield_outlined,
+                        label: 'Privacy Policy',
+                        url: 'https://vasfm-online.vercel.app/privacy',
+                      ),
+                      const SizedBox(width: 16),
+                      _buildLegalButton(
+                        context,
+                        icon: Icons.gavel,
+                        label: 'Terms of Service',
+                        url: 'https://vasfm-online.vercel.app/terms',
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -173,6 +207,33 @@ class AboutScreen extends StatelessWidget {
               ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLegalButton(BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String url,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open $label')),
+            );
+          }
+        }
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }
