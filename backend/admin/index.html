@@ -179,6 +179,40 @@
             opacity: 0.8;
         }
 
+        /* Login Error Alert */
+        .login-alert {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            animation: slideDown 0.4s ease;
+        }
+
+        .login-alert.show {
+            display: flex;
+        }
+
+        .login-alert-error {
+            background: rgba(132, 28, 37, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .login-alert-success {
+            background: rgba(88, 116, 20, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .login-alert i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
         .input-group {
             margin-bottom: 24px;
         }
@@ -621,6 +655,7 @@
             <p class="login-subtitle">Manage your radio station configuration</p>
             
             <form id="loginForm">
+                <div id="loginAlert" class="login-alert"></div>
                 <div class="input-group">
                     <label for="password">Admin Password</label>
                     <div class="input-wrapper">
@@ -762,6 +797,15 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const password = document.getElementById('password').value;
+            const loginBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnContent = loginBtn.innerHTML;
+
+            // Clear previous errors
+            hideLoginAlert();
+
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading-spinner"></span> Signing In...';
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/login`, {
@@ -775,15 +819,45 @@
                 if (response.ok) {
                     authToken = data.token;
                     localStorage.setItem('radio_admin_token', authToken);
-                    showAlert('Welcome back! Login successful.', 'success');
-                    setTimeout(() => showDashboard(), 500);
+                    showLoginAlert('Welcome back! Login successful.', 'success');
+                    setTimeout(() => showDashboard(), 800);
                 } else {
-                    showAlert(data.error || 'Login failed', 'error');
+                    // Show error for wrong password
+                    showLoginAlert(data.error || 'Incorrect password. Please try again.', 'error');
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = originalBtnContent;
+                    
+                    // Clear password field
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
                 }
             } catch (error) {
-                showAlert('Network error: ' + error.message, 'error');
+                console.error('Login error:', error);
+                showLoginAlert('Network error: Cannot connect to server. Please try again.', 'error');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = originalBtnContent;
             }
         });
+
+        // Login alert functions
+        function showLoginAlert(message, type) {
+            const alertBox = document.getElementById('loginAlert');
+            alertBox.className = `login-alert login-alert-${type} show`;
+            alertBox.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                <span>${message}</span>
+            `;
+
+            // Auto-hide success messages, keep errors visible
+            if (type === 'success') {
+                setTimeout(() => hideLoginAlert(), 3000);
+            }
+        }
+
+        function hideLoginAlert() {
+            const alertBox = document.getElementById('loginAlert');
+            alertBox.classList.remove('show');
+        }
 
         // Config Form Handler
         document.getElementById('configForm').addEventListener('submit', async (e) => {
