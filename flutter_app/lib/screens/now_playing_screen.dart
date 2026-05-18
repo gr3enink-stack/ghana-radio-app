@@ -148,7 +148,10 @@ class _PlayerUI extends StatelessWidget {
               // Album Art
               Expanded(
                 flex: 3,
-                child: _AlbumArt(albumArtUrl: radioProvider.config?.albumArtUrl),
+                child: _AlbumArt(
+                  key: ValueKey(radioProvider.config?.albumArtUrl),
+                  albumArtUrl: radioProvider.config?.albumArtUrl,
+                ),
               ),
               const SizedBox(height: 40),
               // Station Info
@@ -191,6 +194,7 @@ class _AlbumArt extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      height: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -205,14 +209,18 @@ class _AlbumArt extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: albumArtUrl != null && albumArtUrl!.isNotEmpty
             ? CachedNetworkImage(
-                imageUrl: '$albumArtUrl?t=${DateTime.now().millisecondsSinceEpoch}',
+                imageUrl: albumArtUrl!,
                 fit: BoxFit.cover,
-                memCacheWidth: 512,
-                memCacheHeight: 512,
+                width: double.infinity,
+                height: double.infinity,
+                memCacheWidth: 800,
+                memCacheHeight: 800,
+                maxWidthDiskCache: 800,
+                maxHeightDiskCache: 800,
                 fadeInDuration: const Duration(milliseconds: 300),
                 fadeOutDuration: const Duration(milliseconds: 300),
                 placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: const Center(
                     child: CircularProgressIndicator(),
                   ),
