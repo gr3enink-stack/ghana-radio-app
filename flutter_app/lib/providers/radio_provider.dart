@@ -118,20 +118,29 @@ class RadioProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse('$apiUrl/api/config'));
+      final url = '$apiUrl/api/config';
+      print('Fetching config from: $url');
+      
+      final response = await http.get(Uri.parse(url));
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('Config loaded: $data');
         _config = RadioConfig.fromJson(data);
         _isLoading = false;
         notifyListeners();
       } else {
-        _error = 'Failed to load configuration';
+        _error = 'Failed to load configuration (HTTP ${response.statusCode})';
+        print('Error: HTTP ${response.statusCode} - ${response.body}');
         _isLoading = false;
         notifyListeners();
       }
     } catch (e) {
       _error = 'Network error: $e';
+      print('Network error: $e');
       _isLoading = false;
       notifyListeners();
     }
