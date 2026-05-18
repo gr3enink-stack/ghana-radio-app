@@ -794,6 +794,7 @@
     <script>
         const API_BASE = window.location.origin;
         let authToken = localStorage.getItem('radio_admin_token');
+        let listenerInterval; // Declare here to avoid hoisting issues
 
         // Theme Toggle Logic
         const themeToggle = document.getElementById('themeToggle');
@@ -1005,7 +1006,6 @@
         }
 
         // Auto-refresh listener count every 5 seconds
-        let listenerInterval;
         function startListenerTracking() {
             loadListenerCount();
             listenerInterval = setInterval(loadListenerCount, 5000);
