@@ -928,7 +928,25 @@
 
                 if (response.ok) {
                     showAlert('Configuration saved successfully!', 'success');
-                    loadCurrentConfig();
+                    
+                    // Use the returned config directly instead of making another API call
+                    if (data.config) {
+                        document.getElementById('stationName').value = data.config.stationName || '';
+                        document.getElementById('streamUrl').value = data.config.streamUrl || '';
+                        document.getElementById('albumArtUrl').value = data.config.albumArtUrl || '';
+                        document.getElementById('description').value = data.config.description || '';
+                        
+                        // Update stats
+                        document.getElementById('stationNameStat').textContent = data.config.stationName || 'N/A';
+                        
+                        const updateDate = new Date(data.config.updatedAt);
+                        document.getElementById('lastUpdate').textContent = updateDate.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
                 } else {
                     showAlert(data.error || 'Failed to save configuration', 'error');
                 }
