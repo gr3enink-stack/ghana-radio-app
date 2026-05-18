@@ -50,13 +50,21 @@ async function readConfig() {
     
     if (data) {
       console.log('Config loaded successfully from Redis');
+      console.log('Config data:', data);
       return JSON.parse(data);
     }
     
-    console.log('No config found in Redis, returning default');
+    console.log('No config found in Redis, checking if we need to initialize');
+    
+    // If no config exists, save the default config to Redis
+    console.log('Initializing Redis with default config');
+    await redis.set(CONFIG_KEY, JSON.stringify(defaultConfig));
+    console.log('Default config saved to Redis');
+    
     return defaultConfig;
   } catch (error) {
     console.error('Error reading config from Redis:', error);
+    console.error('Error stack:', error.stack);
     return defaultConfig;
   }
 }
@@ -66,15 +74,28 @@ async function writeConfig(config) {
   try {
     if (!redis) {
       console.error('Redis not configured, cannot save config');
+      console.error('Make sure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set');
       return false;
     }
     
     console.log('Writing config to Redis');
+    console.log('Config to save:', JSON.stringify(config, null, 2));
+    
     await redis.set(CONFIG_KEY, JSON.stringify(config));
     console.log('Config written successfully to Redis');
+    
+    // Verify the write by reading it back
+    const verification = await redis.get(CONFIG_KEY);
+    if (verification) {
+      console.log('Verification: Config successfully stored in Redis');
+    } else {
+      console.error('Verification failed: Config not found after write!');
+    }
+    
     return true;
   } catch (error) {
     console.error('Error writing config to Redis:', error);
+    console.error('Error stack:', error.stack);
     return false;
   }
 }
@@ -271,17 +292,35 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Radio Server running on port ${PORT}`);
   console.log(`📻 Admin Panel: http://localhost:${PORT}/admin`);
   console.log(` API: http://localhost:${PORT}/api/config`);
   console.log(`🔑 Admin Password: ${ADMIN_PASSWORD}`);
   
   if (redis) {
-    console.log('✅ Redis connection configured');
+    console.log('✅ Redis client initialized');
+    console.log('🔗 Redis URL:', process.env.UPSTASH_REDIS_REST_URL?.substring(0, 30) + '...');
+    
+    // Test Redis connection
+    try {
+      await redis.ping();
+      console.log('✅ Redis connection test: SUCCESS');
+      
+      // Check if config exists
+      const existingConfig = await redis.get(CONFIG_KEY);
+      if (existingConfig) {
+        console.log('✅ Found existing config in Redis');
+      } else {
+        console.log('ℹ️  No config in Redis yet - will initialize on first read');
+      }
+    } catch (error) {
+      console.error('❌ Redis connection test FAILED:', error.message);
+      console.error('Check your UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN');
+    }
   } else {
-    console.log('⚠️  Redis not configured - using default config (read-only mode)');
-    console.log('📝 To enable config updates, set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables');
+    console.log('️  Redis not configured - using default config (read-only mode)');
+    console.log(' To enable config updates, set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables');
   }
 });
 
