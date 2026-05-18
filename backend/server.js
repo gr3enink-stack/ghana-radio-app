@@ -37,24 +37,33 @@ function ensureConfigFile() {
 
 // Read configuration from file
 function readConfig() {
-  ensureConfigFile();
   try {
+    ensureConfigFile();
+    console.log('Reading config from:', CONFIG_FILE);
     const data = fs.readFileSync(CONFIG_FILE, 'utf8');
-    return JSON.parse(data);
+    const config = JSON.parse(data);
+    console.log('Config loaded successfully');
+    return config;
   } catch (error) {
     console.error('Error reading config:', error);
+    console.error('Config file path:', CONFIG_FILE);
+    console.error('Error code:', error.code);
     return defaultConfig;
   }
 }
 
 // Write configuration to file
 function writeConfig(config) {
-  ensureConfigFile();
   try {
+    ensureConfigFile();
+    console.log('Writing config to:', CONFIG_FILE);
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    console.log('Config written successfully');
     return true;
   } catch (error) {
     console.error('Error writing config:', error);
+    console.error('Config file path:', CONFIG_FILE);
+    console.error('Error code:', error.code);
     return false;
   }
 }
@@ -150,12 +159,16 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
   try {
     const { stationName, streamUrl, albumArtUrl, description } = req.body;
 
+    console.log('Received update request:', { stationName, streamUrl, albumArtUrl, description });
+
     // Validate required fields
     if (!streamUrl || streamUrl.trim() === '') {
+      console.error('Validation failed: Stream URL is required');
       return res.status(400).json({ error: 'Stream URL is required' });
     }
 
     const currentConfig = readConfig();
+    console.log('Current config loaded:', currentConfig);
     
     const newConfig = {
       stationName: stationName || currentConfig.stationName || 'My Radio Station',
@@ -165,6 +178,7 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
+    console.log('Attempting to write new config:', newConfig);
     const success = writeConfig(newConfig);
 
     if (success) {
@@ -174,11 +188,17 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
         config: newConfig
       });
     } else {
+      console.error('Failed to write config file');
       res.status(500).json({ error: 'Failed to save configuration' });
     }
   } catch (error) {
     console.error('Error updating config:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
