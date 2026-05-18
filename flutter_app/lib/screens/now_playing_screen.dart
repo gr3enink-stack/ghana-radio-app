@@ -205,8 +205,12 @@ class _AlbumArt extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: albumArtUrl != null && albumArtUrl!.isNotEmpty
             ? CachedNetworkImage(
-                imageUrl: albumArtUrl!,
+                imageUrl: '$albumArtUrl?t=${DateTime.now().millisecondsSinceEpoch}',
                 fit: BoxFit.cover,
+                memCacheWidth: 512,
+                memCacheHeight: 512,
+                fadeInDuration: const Duration(milliseconds: 300),
+                fadeOutDuration: const Duration(milliseconds: 300),
                 placeholder: (context, url) => Container(
                   color: Colors.grey[300],
                   child: const Center(
