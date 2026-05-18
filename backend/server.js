@@ -1,14 +1,24 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
+const { Redis } = require('@upstash/redis');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Environment variables
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+// Initialize Redis client
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
+
+// Redis key for config storage
+const CONFIG_KEY = 'radio:config';
 
 // Listener tracking
 const activeListeners = new Map(); // deviceId -> lastHeartbeat
@@ -27,43 +37,44 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'admin')));
 
-// Ensure config file exists
-function ensureConfigFile() {
-  if (!fs.existsSync(CONFIG_FILE)) {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(defaultConfig, null, 2));
-    console.log('Created default config.json');
-  }
-}
-
-// Read configuration from file
-function readConfig() {
+// Read configuration from Redis
+async function readConfig() {
   try {
-    ensureConfigFile();
-    console.log('Reading config from:', CONFIG_FILE);
-    const data = fs.readFileSync(CONFIG_FILE, 'utf8');
-    const config = JSON.parse(data);
-    console.log('Config loaded successfully');
-    return config;
+    if (!redis) {
+      console.warn('Redis not configured, using default config');
+      return defaultConfig;
+    }
+    
+    console.log('Reading config from Redis');
+    const data = await redis.get(CONFIG_KEY);
+    
+    if (data) {
+      console.log('Config loaded successfully from Redis');
+      return JSON.parse(data);
+    }
+    
+    console.log('No config found in Redis, returning default');
+    return defaultConfig;
   } catch (error) {
-    console.error('Error reading config:', error);
-    console.error('Config file path:', CONFIG_FILE);
-    console.error('Error code:', error.code);
+    console.error('Error reading config from Redis:', error);
     return defaultConfig;
   }
 }
 
-// Write configuration to file
-function writeConfig(config) {
+// Write configuration to Redis
+async function writeConfig(config) {
   try {
-    ensureConfigFile();
-    console.log('Writing config to:', CONFIG_FILE);
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-    console.log('Config written successfully');
+    if (!redis) {
+      console.error('Redis not configured, cannot save config');
+      return false;
+    }
+    
+    console.log('Writing config to Redis');
+    await redis.set(CONFIG_KEY, JSON.stringify(config));
+    console.log('Config written successfully to Redis');
     return true;
   } catch (error) {
-    console.error('Error writing config:', error);
-    console.error('Config file path:', CONFIG_FILE);
-    console.error('Error code:', error.code);
+    console.error('Error writing config to Redis:', error);
     return false;
   }
 }
@@ -115,9 +126,9 @@ app.get('/api/listeners', (req, res) => {
 // ==================== PUBLIC API ENDPOINTS ====================
 
 // Get current radio configuration
-app.get('/api/config', (req, res) => {
+app.get('/api/config', async (req, res) => {
   try {
-    const config = readConfig();
+    const config = await readConfig();
     // Don't expose sensitive fields
     const publicConfig = {
       stationName: config.stationName,
@@ -155,7 +166,7 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Update radio configuration (Admin only)
-app.post('/api/admin/update', authenticateAdmin, (req, res) => {
+app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
   try {
     const { stationName, streamUrl, albumArtUrl, description } = req.body;
 
@@ -167,7 +178,7 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
       return res.status(400).json({ error: 'Stream URL is required' });
     }
 
-    const currentConfig = readConfig();
+    const currentConfig = await readConfig();
     console.log('Current config loaded:', currentConfig);
     
     const newConfig = {
@@ -178,17 +189,17 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    console.log('Attempting to write new config:', newConfig);
-    const success = writeConfig(newConfig);
+    console.log('Attempting to write new config to Redis:', newConfig);
+    const success = await writeConfig(newConfig);
 
     if (success) {
-      console.log('Configuration updated successfully');
+      console.log('Configuration updated successfully in Redis');
       res.json({
         message: 'Configuration updated successfully',
         config: newConfig
       });
     } else {
-      console.error('Failed to write config file');
+      console.error('Failed to write config to Redis');
       res.status(500).json({ error: 'Failed to save configuration' });
     }
   } catch (error) {
@@ -203,9 +214,9 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
 });
 
 // Get current config (Admin only - for admin panel)
-app.get('/api/admin/config', authenticateAdmin, (req, res) => {
+app.get('/api/admin/config', authenticateAdmin, async (req, res) => {
   try {
-    const config = readConfig();
+    const config = await readConfig();
     res.json(config);
   } catch (error) {
     res.status(500).json({ error: 'Failed to read configuration' });
@@ -260,12 +271,18 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-ensureConfigFile();
 app.listen(PORT, () => {
   console.log(`🚀 Radio Server running on port ${PORT}`);
   console.log(`📻 Admin Panel: http://localhost:${PORT}/admin`);
-  console.log(`🔌 API: http://localhost:${PORT}/api/config`);
+  console.log(` API: http://localhost:${PORT}/api/config`);
   console.log(`🔑 Admin Password: ${ADMIN_PASSWORD}`);
+  
+  if (redis) {
+    console.log('✅ Redis connection configured');
+  } else {
+    console.log('⚠️  Redis not configured - using default config (read-only mode)');
+    console.log('📝 To enable config updates, set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables');
+  }
 });
 
 module.exports = app;
