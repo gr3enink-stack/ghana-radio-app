@@ -188,7 +188,7 @@ class _PlayerUI extends StatelessWidget {
 class _AlbumArt extends StatelessWidget {
   final String? albumArtUrl;
 
-  const _AlbumArt({this.albumArtUrl});
+  const _AlbumArt({super.key, this.albumArtUrl});
 
   @override
   Widget build(BuildContext context) {
