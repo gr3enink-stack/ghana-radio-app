@@ -454,6 +454,34 @@
         .form-group input,
         .form-group textarea {
             padding-left: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input.error,
+        .form-group textarea.error {
+            border-color: var(--error);
+            background: rgba(132, 28, 37, 0.05);
+        }
+
+        .form-group input.success,
+        .form-group textarea.success {
+            border-color: var(--success);
+        }
+
+        .validation-hint {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-primary);
+            opacity: 0.7;
+        }
+
+        .validation-error {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--error);
+            font-weight: 500;
         }
 
         .form-group textarea {
@@ -761,16 +789,19 @@
                     <div class="form-group">
                         <label>Station Name <span class="required">*</span></label>
                         <input type="text" id="stationName" placeholder="VAS FM Online" required>
+                        <span class="validation-hint">Your radio station's display name</span>
                     </div>
 
                     <div class="form-group">
                         <label>Album Art URL</label>
                         <input type="text" id="albumArtUrl" placeholder="https://example.com/logo.jpg">
+                        <span class="validation-hint">Direct link to an image (JPG, PNG, WebP). Leave empty for default logo</span>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>Stream URL <span class="required">*</span></label>
                         <input type="text" id="streamUrl" placeholder="https://your-icecast-stream.example.com/stream" required>
+                        <span class="validation-hint">Enter the full URL of your radio stream (Icecast, Shoutcast, or direct MP3/AAC stream)</span>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">
@@ -902,16 +933,51 @@
         document.getElementById('configForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Get form values
+            const stationName = document.getElementById('stationName').value.trim();
+            const streamUrl = document.getElementById('streamUrl').value.trim();
+            const albumArtUrl = document.getElementById('albumArtUrl').value.trim();
+            const description = document.getElementById('description').value.trim();
+
+            // Validation
+            if (!stationName) {
+                showAlert('Station Name is required', 'error');
+                return;
+            }
+
+            if (!streamUrl) {
+                showAlert('Stream URL is required', 'error');
+                return;
+            }
+
+            // Validate stream URL format
+            try {
+                new URL(streamUrl);
+            } catch (e) {
+                showAlert('Invalid Stream URL format. Please enter a valid URL (e.g., https://example.com/stream)', 'error');
+                return;
+            }
+
+            // Validate album art URL if provided
+            if (albumArtUrl) {
+                try {
+                    new URL(albumArtUrl);
+                } catch (e) {
+                    showAlert('Invalid Album Art URL format. Please enter a valid URL or leave it empty.', 'error');
+                    return;
+                }
+            }
+
             const saveBtn = document.getElementById('saveBtn');
             const originalContent = saveBtn.innerHTML;
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
 
             const configData = {
-                stationName: document.getElementById('stationName').value,
-                streamUrl: document.getElementById('streamUrl').value,
-                albumArtUrl: document.getElementById('albumArtUrl').value,
-                description: document.getElementById('description').value
+                stationName,
+                streamUrl,
+                albumArtUrl,
+                description
             };
 
             try {
@@ -951,6 +1017,7 @@
                     showAlert(data.error || 'Failed to save configuration', 'error');
                 }
             } catch (error) {
+                console.error('Save error:', error);
                 showAlert('Network error: ' + error.message, 'error');
             } finally {
                 saveBtn.disabled = false;
@@ -974,6 +1041,7 @@
                 if (response.ok) {
                     const config = await response.json();
                     
+                    // Populate form fields with saved values
                     document.getElementById('stationName').value = config.stationName || '';
                     document.getElementById('streamUrl').value = config.streamUrl || '';
                     document.getElementById('albumArtUrl').value = config.albumArtUrl || '';
@@ -982,19 +1050,25 @@
                     // Update stats
                     document.getElementById('stationNameStat').textContent = config.stationName || 'N/A';
                     
-                    const updateDate = new Date(config.updatedAt);
-                    document.getElementById('lastUpdate').textContent = updateDate.toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                    if (config.updatedAt) {
+                        const updateDate = new Date(config.updatedAt);
+                        document.getElementById('lastUpdate').textContent = updateDate.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+                } else {
+                    console.error('Failed to load config:', response.status, response.statusText);
+                    showAlert('Failed to load configuration. Please refresh the page.', 'error');
                 }
 
                 // Load listener count
                 await loadListenerCount();
             } catch (error) {
                 console.error('Failed to load config:', error);
+                showAlert('Error loading configuration: ' + error.message, 'error');
             }
         }
 
