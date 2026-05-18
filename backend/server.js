@@ -149,7 +149,10 @@ app.get('/api/listeners', (req, res) => {
 // Get current radio configuration
 app.get('/api/config', async (req, res) => {
   try {
+    console.log('GET /api/config - Request received');
     const config = await readConfig();
+    console.log('GET /api/config - Config loaded:', JSON.stringify(config, null, 2));
+    
     // Don't expose sensitive fields
     const publicConfig = {
       stationName: config.stationName,
@@ -158,9 +161,13 @@ app.get('/api/config', async (req, res) => {
       description: config.description,
       updatedAt: config.updatedAt
     };
+    
+    console.log('GET /api/config - Sending response:', JSON.stringify(publicConfig, null, 2));
     res.json(publicConfig);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to read configuration' });
+    console.error('GET /api/config - Error:', error);
+    console.error('GET /api/config - Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to read configuration', details: error.message });
   }
 });
 
