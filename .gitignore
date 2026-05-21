@@ -40,4 +40,9 @@ flutter_app/.dart_tool/
 flutter_app/.packages
 flutter_app/.flutter-plugins
 flutter_app/.flutter-plugins-dependencies
+
+# Android signing keys (NEVER commit these!)
+flutter_app/android/vasfm-release-key.jks
+flutter_app/android/key.properties
+
 backend/DEPLOY_TO_VERCEL_NOW.md

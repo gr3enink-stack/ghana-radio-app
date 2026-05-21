@@ -7,9 +7,11 @@ const PORT = process.env.PORT || 3000;
 
 // Environment variables
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '';
+const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID || '';
 
-// In-memory config storage (resets on server restart)
-let currentConfig = {
+// Default config (used if JSONBin is not configured or fails)
+const defaultConfig = {
   stationName: 'VAS FM Online',
   streamUrl: 'http://s23.myradiostream.com:21022/',
   albumArtUrl: '',
@@ -17,20 +19,87 @@ let currentConfig = {
   updatedAt: new Date().toISOString()
 };
 
+// In-memory cache (will be loaded from JSONBin on startup)
+let currentConfig = { ...defaultConfig };
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'admin')));
+
+// JSONBin.io functions for persistent storage
+async function loadConfigFromJSONBin() {
+  if (!JSONBIN_API_KEY || !JSONBIN_BIN_ID) {
+    console.log('⚠️  JSONBin not configured - using in-memory config');
+    return defaultConfig;
+  }
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: {
+        'X-Master-Key': JSONBIN_API_KEY
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Config loaded from JSONBin');
+      return data.record;
+    } else {
+      console.error('❌ Failed to load config from JSONBin:', response.status);
+      return defaultConfig;
+    }
+  } catch (error) {
+    console.error('❌ Error loading config from JSONBin:', error.message);
+    return defaultConfig;
+  }
+}
+
+async function saveConfigToJSONBin(config) {
+  if (!JSONBIN_API_KEY || !JSONBIN_BIN_ID) {
+    console.log('⚠️  JSONBin not configured - config will not persist');
+    return true;
+  }
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      body: JSON.stringify(config)
+    });
+
+    if (response.ok) {
+      console.log('✅ Config saved to JSONBin');
+      return true;
+    } else {
+      console.error('❌ Failed to save config to JSONBin:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error saving config to JSONBin:', error.message);
+    return false;
+  }
+}
+
+// Load config on startup
+(async function initializeConfig() {
+  currentConfig = await loadConfigFromJSONBin();
+})();
 
 // Read configuration from memory
 function readConfig() {
   return currentConfig;
 }
 
-// Write configuration to memory
-function writeConfig(config) {
+// Write configuration to memory and JSONBin
+async function writeConfig(config) {
   currentConfig = config;
-  return true;
+  // Save to JSONBin for persistence
+  const success = await saveConfigToJSONBin(config);
+  return success;
 }
 
 // ==================== LISTENER TRACKING ====================
@@ -120,7 +189,7 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Update radio configuration (Admin only)
-app.post('/api/admin/update', authenticateAdmin, (req, res) => {
+app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
   try {
     const { stationName, streamUrl, albumArtUrl, description } = req.body;
 
@@ -139,7 +208,7 @@ app.post('/api/admin/update', authenticateAdmin, (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    const success = writeConfig(newConfig);
+    const success = await writeConfig(newConfig);
 
     if (success) {
       res.json({
