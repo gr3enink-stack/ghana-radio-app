@@ -246,14 +246,19 @@ function authenticateAdmin(req, res, next) {
 // Update radio configuration (Admin only)
 app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
   try {
+    console.log('📝 Admin update request received');
+    console.log('   Request body:', req.body);
+    
     const { stationName, streamUrl, albumArtUrl, description } = req.body;
 
     // Validate required fields
     if (!streamUrl || streamUrl.trim() === '') {
+      console.log('❌ Validation failed: Stream URL is required');
       return res.status(400).json({ error: 'Stream URL is required' });
     }
 
     const currentConfig = readConfig();
+    console.log('📋 Current config:', currentConfig);
     
     const newConfig = {
       stationName: stationName || currentConfig.stationName || 'VAS FM Online',
@@ -263,19 +268,24 @@ app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
+    console.log('💾 Saving new config:', newConfig);
     const success = await writeConfig(newConfig);
+    console.log('💾 Save result:', success ? 'SUCCESS' : 'FAILED');
 
     if (success) {
+      console.log('✅ Configuration updated successfully');
       res.json({
         message: 'Configuration updated successfully',
         config: newConfig
       });
     } else {
+      console.error('❌ Failed to save configuration');
       res.status(500).json({ error: 'Failed to save configuration' });
     }
   } catch (error) {
-    console.error('Error updating config:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error updating config:', error);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 });
 
