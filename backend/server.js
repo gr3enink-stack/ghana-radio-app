@@ -11,8 +11,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 // In-memory config storage (resets on server restart)
 let currentConfig = {
   stationName: 'VAS FM Online',
-  streamUrl: 'http://eu7.fastcast4u.com:6182/stream?type=http&nocache=297',
-  albumArtUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRMQjAioyQOCfP3vxk8GsmtQaHJHo5RJK15Q&s',
+  streamUrl: 'http://s23.myradiostream.com:21022/',
+  albumArtUrl: '',
   description: 'Your favorite internet radio station',
   updatedAt: new Date().toISOString()
 };
