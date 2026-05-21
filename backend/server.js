@@ -13,7 +13,7 @@ const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID || '';
 // Default config (used if JSONBin is not configured or fails)
 const defaultConfig = {
   stationName: 'VAS FM Online',
-  streamUrl: 'http://s23.myradiostream.com:21022/',
+  streamUrl: 'http://s23.myradiostream.com:21022/;',  // Shoutcast V1 format with semicolon
   albumArtUrl: '',
   description: 'Your favorite internet radio station',
   updatedAt: new Date().toISOString()

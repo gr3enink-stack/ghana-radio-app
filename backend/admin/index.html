@@ -800,8 +800,8 @@
 
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>Stream URL <span class="required">*</span></label>
-                        <input type="text" id="streamUrl" placeholder="http://server:port/stream or http://server:port/;" required>
-                        <span class="validation-hint">💡 Examples: http://server:port/stream, http://server:port/live, http://server:port/;, or https://stream.example.com/radio.mp3</span>
+                        <input type="text" id="streamUrl" placeholder="http://server:port/; (Shoutcast) or http://server:port/stream (Icecast)" required>
+                        <span class="validation-hint">💡 Shoutcast V1: Use /; at end | Icecast/Shoutcast V2: Use /stream | Direct: Use .mp3 or .aac URL</span>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">
@@ -964,8 +964,8 @@
             const hasPort = urlObj.port;
             
             if (hasPort && !hasPath) {
-                // URL has port but no path - might need /stream or /live
-                showAlert('⚠️ Warning: Stream URL has no path. If it doesn\'t work, try adding /stream or /; to the end. Example: http://server:port/stream', 'error');
+                // URL has port but no path - might need /stream, /live, or /; for Shoutcast
+                showAlert('⚠️ Warning: Stream URL has no path. Try adding /stream, /live, or /; (for Shoutcast V1). Example: http://server:port/;', 'error');
                 // Don't block save, just warn
             }
 
