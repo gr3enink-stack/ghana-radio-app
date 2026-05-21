@@ -35,20 +35,42 @@ async function loadConfigFromJSONBin() {
   }
 
   try {
-    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: {
-        'X-Master-Key': JSONBIN_API_KEY
-      }
+    const https = require('https');
+    
+    return new Promise((resolve, reject) => {
+      const url = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`;
+      
+      https.get(url, {
+        headers: {
+          'X-Master-Key': JSONBIN_API_KEY
+        }
+      }, (response) => {
+        let data = '';
+        
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        response.on('end', () => {
+          try {
+            if (response.statusCode === 200) {
+              const parsed = JSON.parse(data);
+              console.log('✅ Config loaded from JSONBin');
+              resolve(parsed.record);
+            } else {
+              console.error('❌ Failed to load config from JSONBin:', response.statusCode);
+              resolve(defaultConfig);
+            }
+          } catch (error) {
+            console.error('❌ Error parsing JSONBin response:', error.message);
+            resolve(defaultConfig);
+          }
+        });
+      }).on('error', (error) => {
+        console.error('❌ Error loading config from JSONBin:', error.message);
+        resolve(defaultConfig);
+      });
     });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Config loaded from JSONBin');
-      return data.record;
-    } else {
-      console.error('❌ Failed to load config from JSONBin:', response.status);
-      return defaultConfig;
-    }
   } catch (error) {
     console.error('❌ Error loading config from JSONBin:', error.message);
     return defaultConfig;
@@ -62,31 +84,64 @@ async function saveConfigToJSONBin(config) {
   }
 
   try {
-    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': JSONBIN_API_KEY
-      },
-      body: JSON.stringify(config)
+    const https = require('https');
+    
+    return new Promise((resolve, reject) => {
+      const url = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+      const postData = JSON.stringify(config);
+      
+      const options = {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          'X-Master-Key': JSONBIN_API_KEY
+        }
+      };
+      
+      const req = https.request(url, options, (response) => {
+        let data = '';
+        
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        response.on('end', () => {
+          if (response.statusCode === 200) {
+            console.log('✅ Config saved to JSONBin');
+            resolve(true);
+          } else {
+            console.error('❌ Failed to save config to JSONBin:', response.statusCode, data);
+            resolve(false);
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('❌ Error saving config to JSONBin:', error.message);
+        resolve(false);
+      });
+      
+      req.write(postData);
+      req.end();
     });
-
-    if (response.ok) {
-      console.log('✅ Config saved to JSONBin');
-      return true;
-    } else {
-      console.error('❌ Failed to save config to JSONBin:', response.status);
-      return false;
-    }
   } catch (error) {
     console.error('❌ Error saving config to JSONBin:', error.message);
     return false;
   }
 }
 
-// Load config on startup
+// Load config on startup (with error handling)
+let configLoaded = false;
 (async function initializeConfig() {
-  currentConfig = await loadConfigFromJSONBin();
+  try {
+    currentConfig = await loadConfigFromJSONBin();
+    configLoaded = true;
+    console.log('✅ Initial config loaded');
+  } catch (error) {
+    console.error('❌ Failed to load initial config, using defaults:', error.message);
+    configLoaded = true; // Still mark as loaded to allow requests
+  }
 })();
 
 // Read configuration from memory
