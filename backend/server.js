@@ -27,6 +27,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'admin')));
 
+// Log startup
+console.log('🚀 VAS FM Radio Backend Starting...');
+console.log('📡 Admin Password:', ADMIN_PASSWORD ? '***configured***' : '***using default***');
+console.log('💾 JSONBin:', JSONBIN_API_KEY && JSONBIN_BIN_ID ? '✅ configured' : '⚠️  not configured (using in-memory)');
+
 // JSONBin.io functions for persistent storage
 async function loadConfigFromJSONBin() {
   if (!JSONBIN_API_KEY || !JSONBIN_BIN_ID) {
@@ -179,34 +184,44 @@ app.post('/api/listener/heartbeat', (req, res) => {
 
 // Get active listener count
 app.get('/api/listeners', (req, res) => {
-  const now = new Date();
-  const timeout = 60 * 1000; // 1 minute timeout
-  
-  // Remove stale listeners (no heartbeat in last 60 seconds)
-  for (const [deviceId, data] of activeListeners.entries()) {
-    const lastBeat = new Date(data.lastHeartbeat);
-    if (now - lastBeat > timeout) {
-      activeListeners.delete(deviceId);
+  try {
+    const now = new Date();
+    const timeout = 60 * 1000; // 1 minute timeout
+    
+    // Remove stale listeners (no heartbeat in last 60 seconds)
+    for (const [deviceId, data] of activeListeners.entries()) {
+      const lastBeat = new Date(data.lastHeartbeat);
+      if (now - lastBeat > timeout) {
+        activeListeners.delete(deviceId);
+      }
     }
+
+    const listenerList = Array.from(activeListeners.entries()).map(([id, data]) => ({
+      deviceId: id,
+      ...data
+    }));
+
+    res.json({
+      activeListeners: activeListeners.size,
+      listeners: listenerList
+    });
+  } catch (error) {
+    console.error('❌ Error getting listeners:', error);
+    res.json({
+      activeListeners: 0,
+      listeners: []
+    });
   }
-
-  const listenerList = Array.from(activeListeners.entries()).map(([id, data]) => ({
-    deviceId: id,
-    ...data
-  }));
-
-  res.json({
-    activeListeners: activeListeners.size,
-    listeners: listenerList
-  });
 });
 
 // ==================== PUBLIC API ENDPOINTS ====================
 
-// Get current radio configuration
+// Get current radio configuration (Public - for mobile app)
 app.get('/api/config', (req, res) => {
   try {
+    console.log('📱 Mobile app requesting config');
     const config = readConfig();
+    
     // Don't expose sensitive fields
     const publicConfig = {
       stationName: config.stationName,
@@ -215,9 +230,19 @@ app.get('/api/config', (req, res) => {
       description: config.description,
       updatedAt: config.updatedAt
     };
+    
+    console.log('📱 Config sent:', publicConfig.stationName, publicConfig.streamUrl);
     res.json(publicConfig);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to read configuration' });
+    console.error('❌ Error reading config for mobile app:', error);
+    // Always return default config on error
+    res.json({
+      stationName: defaultConfig.stationName,
+      streamUrl: defaultConfig.streamUrl,
+      albumArtUrl: defaultConfig.albumArtUrl,
+      description: defaultConfig.description,
+      updatedAt: defaultConfig.updatedAt
+    });
   }
 });
 
@@ -228,6 +253,7 @@ function authenticateAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
+    console.log('❌ Auth failed: No authorization header');
     return res.status(401).json({ error: 'No authorization header provided' });
   }
 
@@ -237,11 +263,36 @@ function authenticateAdmin(req, res, next) {
     : authHeader;
 
   if (token !== ADMIN_PASSWORD) {
+    console.log('❌ Auth failed: Invalid password provided');
     return res.status(403).json({ error: 'Invalid password' });
   }
 
+  console.log('✅ Admin authentication successful');
   next();
 }
+
+// Admin login endpoint
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+
+  console.log('🔐 Admin login attempt');
+
+  if (!password) {
+    console.log('❌ Login failed: No password provided');
+    return res.status(400).json({ error: 'Password is required' });
+  }
+
+  if (password === ADMIN_PASSWORD) {
+    console.log('✅ Login successful');
+    res.json({ 
+      message: 'Login successful',
+      token: ADMIN_PASSWORD // Simple token (same as password for now)
+    });
+  } else {
+    console.log('❌ Login failed: Invalid password');
+    res.status(401).json({ error: 'Invalid password' });
+  }
+});
 
 // Update radio configuration (Admin only)
 app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
@@ -292,28 +343,14 @@ app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
 // Get current config (Admin only - for admin panel)
 app.get('/api/admin/config', authenticateAdmin, (req, res) => {
   try {
+    console.log('📋 Admin requesting current config');
     const config = readConfig();
+    console.log('📋 Config loaded:', config.stationName, config.streamUrl);
     res.json(config);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to read configuration' });
-  }
-});
-
-// Admin login endpoint
-app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ error: 'Password is required' });
-  }
-
-  if (password === ADMIN_PASSWORD) {
-    res.json({ 
-      message: 'Login successful',
-      token: ADMIN_PASSWORD // Simple token (same as password for now)
-    });
-  } else {
-    res.status(401).json({ error: 'Invalid password' });
+    console.error('❌ Error reading config for admin:', error);
+    // Return default config even on error
+    res.json(defaultConfig);
   }
 });
 
@@ -348,11 +385,14 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Radio Server running on port ${PORT}`);
-  console.log(`📻 Admin Panel: http://localhost:${PORT}/admin`);
-  console.log(` API: http://localhost:${PORT}/api/config`);
-  console.log(`🔑 Admin Password: ${ADMIN_PASSWORD}`);
-  console.log('✅ Using in-memory config storage (persists during server runtime)');
+  console.log('✅ ========================================');
+  console.log('✅ VAS FM Radio Server is READY!');
+  console.log('✅ ========================================');
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📻 Admin Panel: http://localhost:${PORT}`);
+  console.log(`📱 Mobile API: http://localhost:${PORT}/api/config`);
+  console.log(`💾 Config Storage: ${JSONBIN_API_KEY && JSONBIN_BIN_ID ? 'JSONBin (Persistent)' : 'In-Memory (Temporary)'}`);
+  console.log('✅ ========================================');
 });
 
 module.exports = app;
