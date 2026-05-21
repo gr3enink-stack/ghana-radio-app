@@ -119,28 +119,42 @@ class RadioProvider extends ChangeNotifier {
 
     try {
       final url = '$apiUrl/api/config';
-      print('Fetching config from: $url');
+      print('📡 Fetching config from: $url');
       
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'User-Agent': 'VAS FM Radio App/1.0'},
+      );
       
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('📥 Response status: ${response.statusCode}');
+      print('📄 Response body: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Config loaded: $data');
+        print('✅ Config loaded successfully');
+        print('   Station: ${data['stationName']}');
+        print('   Stream: ${data['streamUrl']}');
+        print('   Album Art: ${data['albumArtUrl']}');
+        
         _config = RadioConfig.fromJson(data);
+        
+        // Validate stream URL
+        if (_config!.streamUrl.isEmpty) {
+          _error = 'Stream URL is empty. Please configure in admin dashboard.';
+          print('⚠️ Warning: Stream URL is empty');
+        }
+        
         _isLoading = false;
         notifyListeners();
       } else {
         _error = 'Failed to load configuration (HTTP ${response.statusCode})';
-        print('Error: HTTP ${response.statusCode} - ${response.body}');
+        print('❌ Error: HTTP ${response.statusCode} - ${response.body}');
         _isLoading = false;
         notifyListeners();
       }
     } catch (e) {
-      _error = 'Network error: $e';
-      print('Network error: $e');
+      _error = 'Network error: Cannot connect to server. Check your internet connection.';
+      print('❌ Network error: $e');
       _isLoading = false;
       notifyListeners();
     }
@@ -148,25 +162,61 @@ class RadioProvider extends ChangeNotifier {
 
   // Play the radio stream
   Future<void> play() async {
-    if (_config == null || _config!.streamUrl.isEmpty) {
-      _error = 'No stream URL configured';
+    if (_config == null) {
+      _error = 'Configuration not loaded yet. Please wait...';
       notifyListeners();
       return;
     }
+
+    if (_config!.streamUrl.isEmpty) {
+      _error = 'No stream URL configured. Please update in admin dashboard.';
+      notifyListeners();
+      return;
+    }
+
+    // Validate stream URL format
+    final streamUrl = _config!.streamUrl.trim();
+    if (!streamUrl.startsWith('http://') && !streamUrl.startsWith('https://')) {
+      _error = 'Invalid stream URL format. URL must start with http:// or https://';
+      notifyListeners();
+      return;
+    }
+
+    print('🎵 Attempting to play: $streamUrl');
 
     try {
       _error = null;
       notifyListeners();
 
+      // Set the audio source
       await _audioPlayer.setUrl(
-        _config!.streamUrl,
+        streamUrl,
+        headers: {
+          'User-Agent': 'VAS FM Radio App/1.0',
+          'Icy-MetaData': '1',
+        },
       );
       
+      // Play the stream
       await _audioPlayer.play();
+      
+      print('✅ Playback started successfully');
       
       // Start listener tracking
       _startHeartbeat();
+    } on PlayerException catch (e) {
+      // just_audio specific errors
+      print('❌ Player error: ${e.message}');
+      _error = 'Failed to play stream: ${e.message}';
+      notifyListeners();
+    } on SocketException catch (e) {
+      // Network errors
+      print('❌ Network error: ${e.message}');
+      _error = 'Network error: Cannot reach stream server. Check your internet connection.';
+      notifyListeners();
     } catch (e) {
+      // Generic errors
+      print('❌ Error: $e');
       _error = 'Failed to play stream: $e';
       notifyListeners();
     }
