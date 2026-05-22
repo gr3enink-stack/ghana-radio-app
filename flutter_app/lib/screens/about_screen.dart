@@ -145,6 +145,58 @@ class AboutScreen extends StatelessWidget {
                     'Version 1.0.0',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  const SizedBox(height: 30),
+                  
+                  // POWERED BY ARTHIUM LABS LLC
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF371348)
+                              : const Color(0xFF6A229C),
+                          Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF5A1D87)
+                              : const Color(0xFF5A1D87),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6A229C).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'POWERED BY',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w300,
+                            color: Colors.white.withOpacity(0.8),
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'ARTHIUM LABS LLC',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   
                   // Legal Links

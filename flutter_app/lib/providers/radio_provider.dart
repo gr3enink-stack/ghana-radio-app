@@ -17,6 +17,9 @@ class RadioProvider extends ChangeNotifier {
   Duration _duration = Duration.zero;
   Timer? _heartbeatTimer;
   String? _deviceId;
+  Timer? _sleepTimer;
+  Duration? _sleepTimerDuration;
+  bool _isSleepTimerActive = false;
   
   // Stream subscriptions to prevent memory leaks
   late StreamSubscription<PlayerState> _playerStateSubscription;
@@ -33,6 +36,8 @@ class RadioProvider extends ChangeNotifier {
   Duration get position => _position;
   Duration get duration => _duration;
   bool get isBuffering => _audioPlayer.processingState == ProcessingState.buffering;
+  bool get isSleepTimerActive => _isSleepTimerActive;
+  Duration? get sleepTimerDuration => _sleepTimerDuration;
 
   RadioProvider() {
     _initPlayer();
@@ -315,9 +320,36 @@ class RadioProvider extends ChangeNotifier {
     }
   }
 
+  void startSleepTimer(Duration duration) {
+    stopSleepTimer();
+    _sleepTimerDuration = duration;
+    _isSleepTimerActive = true;
+    notifyListeners();
+    
+    print('⏰ Sleep timer started: ${duration.inMinutes} minutes');
+    
+    _sleepTimer = Timer(duration, () {
+      print('⏰ Sleep timer expired - stopping playback');
+      stop();
+      _isSleepTimerActive = false;
+      _sleepTimerDuration = null;
+      notifyListeners();
+    });
+  }
+  
+  void stopSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _isSleepTimerActive = false;
+    _sleepTimerDuration = null;
+    notifyListeners();
+    print('⏰ Sleep timer stopped');
+  }
+  
   @override
   void dispose() {
     _stopHeartbeat();
+    stopSleepTimer();
     
     // Cancel all stream subscriptions to prevent memory leaks
     _playerStateSubscription.cancel();
