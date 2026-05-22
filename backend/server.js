@@ -249,10 +249,34 @@ function readConfig() {
 
 // Write configuration to memory and JSONBin
 async function writeConfig(config) {
-  currentConfig = config;
-  // Save to JSONBin for persistence
-  const success = await saveConfigToJSONBin(config);
-  return success;
+  try {
+    console.log('💾 writeConfig called');
+    console.log('   JSONBin configured:', !!(JSONBIN_API_KEY && JSONBIN_BIN_ID));
+    
+    // Update in-memory config
+    currentConfig = config;
+    console.log('✅ In-memory config updated');
+    
+    // Try to save to JSONBin if configured
+    if (JSONBIN_API_KEY && JSONBIN_BIN_ID) {
+      console.log('💾 Saving to JSONBin...');
+      const success = await saveConfigToJSONBin(config);
+      if (success) {
+        console.log('✅ Config saved to JSONBin');
+      } else {
+        console.error('❌ Failed to save to JSONBin, but in-memory config is updated');
+      }
+      return success;
+    } else {
+      console.log('⚠️  JSONBin not configured - config saved in-memory only (will reset on restart)');
+      return true; // Return true for in-memory save
+    }
+  } catch (error) {
+    console.error('❌ writeConfig error:', error.message);
+    console.error('   Stack:', error.stack);
+    // Still return true if in-memory was updated
+    return currentConfig === config;
+  }
 }
 
 // ==================== LISTENER TRACKING ====================
