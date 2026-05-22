@@ -159,8 +159,8 @@ async function saveConfigToJSONBin(config) {
         });
         
         response.on('end', () => {
-          if (response.statusCode === 200) {
-            console.log('✅ Config saved to JSONBin');
+          if (response.statusCode === 200 || response.statusCode === 202) {
+            console.log('✅ Config saved to JSONBin (Status:', response.statusCode, ')');
             resolve(true);
           } else {
             console.error('❌ Failed to save config to JSONBin:', response.statusCode, data);
