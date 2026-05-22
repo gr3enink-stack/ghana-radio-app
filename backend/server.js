@@ -459,33 +459,44 @@ app.post('/api/admin/login', strictLimiter, (req, res) => {
 
 // Update radio configuration (Admin only)
 app.post('/api/admin/update', strictLimiter, authenticateAdmin, async (req, res) => {
+  console.log('\n========================================');
+  console.log('📝 ADMIN UPDATE REQUEST STARTED');
+  console.log('========================================');
+  
   try {
-    console.log('📝 Admin update request received');
-    console.log('   Request body:', req.body);
+    console.log('1️⃣ Request received');
+    console.log('   Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('   Body:', JSON.stringify(req.body, null, 2));
     
     const { stationName, streamUrl, albumArtUrl, description } = req.body;
 
     // Validate required fields
     if (!streamUrl || streamUrl.trim() === '') {
-      console.log('❌ Validation failed: Stream URL is required');
+      console.log('❌ Step 1 FAILED: Stream URL is required');
       return res.status(400).json({ error: 'Stream URL is required' });
     }
+    console.log('✅ Step 1 PASSED: Stream URL present');
     
     // Validate stream URL format
+    console.log('2️⃣ Validating URL format...');
     const urlValidation = isValidStreamUrl(streamUrl);
     if (!urlValidation.valid) {
-      console.log('❌ Validation failed:', urlValidation.error);
+      console.log('❌ Step 2 FAILED:', urlValidation.error);
       return res.status(400).json({ error: urlValidation.error });
     }
+    console.log('✅ Step 2 PASSED: URL valid');
     
     // Log warning if present
     if (urlValidation.warning) {
       console.log('⚠️ URL Warning:', urlValidation.warning);
     }
 
+    console.log('3️⃣ Reading current config...');
     const currentConfig = readConfig();
-    console.log('📋 Current config:', currentConfig);
+    console.log('   Current:', currentConfig);
+    console.log('✅ Step 3 PASSED');
     
+    console.log('4️⃣ Building new config...');
     const newConfig = {
       stationName: stationName || currentConfig.stationName || 'VAS FM Online',
       streamUrl: streamUrl.trim(),
@@ -493,26 +504,39 @@ app.post('/api/admin/update', strictLimiter, authenticateAdmin, async (req, res)
       description: description || currentConfig.description || '',
       updatedAt: new Date().toISOString()
     };
+    console.log('   New config:', JSON.stringify(newConfig, null, 2));
+    console.log('✅ Step 4 PASSED');
 
-    console.log('💾 Saving new config:', newConfig);
+    console.log('5️⃣ Calling writeConfig...');
+    console.log('   JSONBin API Key:', JSONBIN_API_KEY ? '✅ Present' : '❌ Missing');
+    console.log('   JSONBin Bin ID:', JSONBIN_BIN_ID ? '✅ Present' : '❌ Missing');
+    
     const success = await writeConfig(newConfig);
-    console.log('💾 Save result:', success ? 'SUCCESS' : 'FAILED');
+    console.log('   writeConfig returned:', success);
+    console.log('✅ Step 5 COMPLETED');
 
     if (success) {
-      console.log('✅ Configuration updated successfully');
+      console.log('✅ SUCCESS: Configuration updated');
+      console.log('========================================\n');
       res.json({
         message: 'Configuration updated successfully',
         config: newConfig,
         warning: urlValidation.warning || null
       });
     } else {
-      console.error('❌ Failed to save configuration');
+      console.error('❌ FAILED: writeConfig returned false');
+      console.log('========================================\n');
       res.status(500).json({ error: 'Failed to save configuration' });
     }
   } catch (error) {
-    console.error('❌ Error updating config:', error);
+    console.error('\n❌ UNCAUGHT ERROR in /api/admin/update:');
+    console.error('   Message:', error.message);
     console.error('   Stack:', error.stack);
-    res.status(500).json({ error: 'Internal server error: ' + error.message });
+    console.log('========================================\n');
+    res.status(500).json({ 
+      error: 'Internal server error: ' + error.message,
+      stack: error.stack 
+    });
   }
 });
 
