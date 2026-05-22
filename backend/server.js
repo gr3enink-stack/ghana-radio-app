@@ -390,38 +390,46 @@ function authenticateAdmin(req, res, next) {
 
 // Admin login endpoint
 app.post('/api/admin/login', strictLimiter, (req, res) => {
-  const { password } = req.body;
+  try {
+    const { password } = req.body;
 
-  console.log('🔐 Admin login attempt');
+    console.log('🔐 Admin login attempt');
 
-  if (!password) {
-    console.log('❌ Login failed: No password provided');
-    return res.status(400).json({ error: 'Password is required' });
-  }
+    if (!password) {
+      console.log('❌ Login failed: No password provided');
+      return res.status(400).json({ error: 'Password is required' });
+    }
 
-  if (password === ADMIN_PASSWORD) {
-    console.log('✅ Login successful');
-    
-    // Generate JWT token with 24-hour expiration
-    const token = jwt.sign(
-      { 
-        role: 'admin',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    
-    res.json({ 
-      message: 'Login successful',
-      token: token,
-      expiresIn: '24 hours',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    if (password === ADMIN_PASSWORD) {
+      console.log('✅ Login successful');
+      
+      // Generate JWT token with 24-hour expiration
+      const token = jwt.sign(
+        { 
+          role: 'admin',
+          iat: Math.floor(Date.now() / 1000)
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      res.json({ 
+        message: 'Login successful',
+        token: token,
+        expiresIn: '24 hours',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      });
+    } else {
+      console.log('❌ Login failed: Invalid password');
+      res.status(401).json({ error: 'Invalid password' });
+    }
+  } catch (error) {
+    console.error('❌ Login endpoint error:', error.message);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error during login',
+      details: error.message 
     });
-  } else {
-    console.log('❌ Login failed: Invalid password');
-    res.status(401).json({ error: 'Invalid password' });
   }
 });
 
