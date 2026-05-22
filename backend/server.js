@@ -105,16 +105,31 @@ async function loadConfigFromJSONBin() {
         
         response.on('end', () => {
           try {
-            if (response.statusCode === 200) {
+            console.log('📦 JSONBin response status:', response.statusCode);
+            console.log('📦 JSONBin response data (first 200 chars):', data.substring(0, 200));
+            
+            if (response.statusCode === 200 || response.statusCode === 202) {
               const parsed = JSON.parse(data);
               console.log('✅ Config loaded from JSONBin');
-              resolve(parsed.record);
+              console.log('📦 Parsed structure:', Object.keys(parsed));
+              
+              // JSONBin v3 returns { record: {...}, metadata: {...} }
+              if (parsed.record && typeof parsed.record === 'object') {
+                console.log('✅ Found record object in response');
+                resolve(parsed.record);
+              } else {
+                // Fallback: if no record field, use the whole parsed object
+                console.log('⚠️ No record field, using entire response');
+                resolve(parsed);
+              }
             } else {
               console.error('❌ Failed to load config from JSONBin:', response.statusCode);
+              console.error('   Response:', data);
               resolve(defaultConfig);
             }
           } catch (error) {
             console.error('❌ Error parsing JSONBin response:', error.message);
+            console.error('   Raw data:', data);
             resolve(defaultConfig);
           }
         });
