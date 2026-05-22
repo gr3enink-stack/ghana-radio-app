@@ -130,6 +130,11 @@ class RadioProvider extends ChangeNotifier {
       final response = await http.get(
         Uri.parse(url),
         headers: {'User-Agent': 'VAS FM Radio App/1.0'},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request timed out. Please check your internet connection.');
+        },
       );
       
       print('📥 Response status: ${response.statusCode}');
@@ -178,7 +183,7 @@ class RadioProvider extends ChangeNotifier {
         _config = cachedConfig;
         _error = 'Offline mode - using cached config';
       } else {
-        _error = 'Network error: Cannot connect to server. Check your internet connection.';
+        _error = 'Cannot connect to server. Please check your internet connection.';
       }
       _isLoading = false;
       notifyListeners();
