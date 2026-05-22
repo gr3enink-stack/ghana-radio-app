@@ -151,11 +151,16 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _PlayerUI extends StatelessWidget {
+class _PlayerUI extends StatefulWidget {
   final RadioProvider radioProvider;
 
   const _PlayerUI({required this.radioProvider});
 
+  @override
+  State<_PlayerUI> createState() => _PlayerUIState();
+}
+
+class _PlayerUIState extends State<_PlayerUI> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -171,39 +176,98 @@ class _PlayerUI extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  Text(
-                    'Now Playing',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF6A229C),
-                        ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AboutScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Pull-to-refresh: reload config
+            await widget.radioProvider.fetchConfig(
+              const String.fromEnvironment(
+                'API_URL',
+                defaultValue: 'https://vasfm-online.vercel.app',
               ),
-              const SizedBox(height: 40),
-              // Album Art
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Configuration refreshed'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                // Header with Connection Status
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Connection Status Indicator
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: widget.radioProvider.error == null
+                                ? Colors.green
+                                : Colors.red,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (widget.radioProvider.error == null
+                                        ? Colors.green
+                                        : Colors.red)
+                                    .withOpacity(0.5),
+                                blurRadius: 4,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.radioProvider.error == null
+                              ? 'Online'
+                              : 'Offline',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: widget.radioProvider.error == null
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AboutScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Now Playing Title
+                Text(
+                  'Now Playing',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF6A229C),
+                      ),
+                ),
+                const SizedBox(height: 24),
+                // Album Art
               Expanded(
                 flex: 3,
                 child: _AlbumArt(
@@ -234,11 +298,93 @@ class _PlayerUI extends StatelessWidget {
               const SizedBox(height: 40),
               // Play/Pause Button
               _PlayPauseButton(radioProvider: radioProvider),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
+              // Sleep Timer Button
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _showSleepTimerDialog(context),
+                  icon: Icon(
+                    widget.radioProvider.isSleepTimerActive
+                        ? Icons.timer_off
+                        : Icons.timer,
+                    size: 20,
+                  ),
+                  label: Text(
+                    widget.radioProvider.isSleepTimerActive
+                        ? 'Stop Timer'
+                        : 'Sleep Timer',
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF6A229C),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+          ),  // Close RefreshIndicator
+        ),
       ),
+    );
+  }
+  
+  void _showSleepTimerDialog(BuildContext context) {
+    if (widget.radioProvider.isSleepTimerActive) {
+      // Stop timer
+      widget.radioProvider.stopSleepTimer();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏰ Sleep timer stopped'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      // Show timer options
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Set Sleep Timer',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(),
+              _buildTimerOption(context, Duration(minutes: 15), '15 Minutes'),
+              _buildTimerOption(context, Duration(minutes: 30), '30 Minutes'),
+              _buildTimerOption(context, Duration(minutes: 45), '45 Minutes'),
+              _buildTimerOption(context, Duration(minutes: 60), '1 Hour'),
+              _buildTimerOption(context, Duration(minutes: 90), '1.5 Hours'),
+              _buildTimerOption(context, Duration(minutes: 120), '2 Hours'),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+  
+  Widget _buildTimerOption(BuildContext context, Duration duration, String label) {
+    return ListTile(
+      title: Text(label),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        widget.radioProvider.startSleepTimer(duration);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⏰ Sleep timer set for $label'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
     );
   }
 }
