@@ -271,24 +271,24 @@ class _PlayerUIState extends State<_PlayerUI> {
               Expanded(
                 flex: 3,
                 child: _AlbumArt(
-                  key: ValueKey(radioProvider.config?.albumArtUrl),
-                  albumArtUrl: radioProvider.config?.albumArtUrl,
+                  key: ValueKey(widget.radioProvider.config?.albumArtUrl),
+                  albumArtUrl: widget.radioProvider.config?.albumArtUrl,
                 ),
               ),
               const SizedBox(height: 40),
               // Station Info
               Text(
-                radioProvider.config?.stationName ?? 'Unknown Station',
+                widget.radioProvider.config?.stationName ?? 'Unknown Station',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF6A229C),
                     ),
                 textAlign: TextAlign.center,
               ),
-              if (radioProvider.config?.description != null) ...[
+              if (widget.radioProvider.config?.description != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  radioProvider.config!.description!,
+                  widget.radioProvider.config!.description!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF34380E),
                       ),
@@ -297,7 +297,7 @@ class _PlayerUIState extends State<_PlayerUI> {
               ],
               const SizedBox(height: 40),
               // Play/Pause Button
-              _PlayPauseButton(radioProvider: radioProvider),
+              _PlayPauseButton(radioProvider: widget.radioProvider),
               const SizedBox(height: 16),
               // Sleep Timer Button
               Center(
@@ -319,14 +319,13 @@ class _PlayerUIState extends State<_PlayerUI> {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-          ),  // Close RefreshIndicator
-        ),
-      ),
-    );
-  }
+            ],  // Close Column children
+          ),  // Close Column
+        ),  // Close Padding
+      ),  // Close RefreshIndicator
+    ),  // Close SafeArea
+  );  // Close Container
+}
   
   void _showSleepTimerDialog(BuildContext context) {
     if (widget.radioProvider.isSleepTimerActive) {
