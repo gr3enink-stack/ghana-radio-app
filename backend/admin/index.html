@@ -508,6 +508,21 @@
             background: var(--bg-card);
             border-color: var(--accent);
         }
+        
+        /* NEW: Danger button for stop test */
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 16px 32px;
+            width: auto;
+            border: none;
+        }
+        
+        .btn-danger:hover {
+            background: var(--error);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(190, 16, 19, 0.3);
+        }
 
         .loading-spinner {
             display: inline-block;
@@ -561,6 +576,20 @@
             background: rgba(132, 28, 37, 0.15);
             border: 1px solid var(--error);
             color: var(--error);
+        }
+        
+        /* NEW: Warning alert style */
+        .alert-warning {
+            background: rgba(252, 222, 43, 0.15);
+            border: 1px solid var(--accent);
+            color: var(--text-secondary);
+        }
+        
+        /* NEW: Info alert style */
+        .alert-info {
+            background: rgba(106, 34, 156, 0.15);
+            border: 1px solid var(--primary);
+            color: var(--primary);
         }
 
         .alert i {
@@ -777,6 +806,17 @@
                 <div class="stat-value" id="lastUpdate">Loading...</div>
                 <div class="stat-subtitle">Last Updated</div>
             </div>
+            
+            <!-- NEW: Last Saved Timestamp -->
+            <div class="stat-card" id="lastSavedCard" style="display: none;">
+                <div class="stat-header">
+                    <div class="stat-icon info">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+                <div class="stat-value" id="lastSaved" style="font-size: 14px;">-</div>
+                <div class="stat-subtitle">Last Saved</div>
+            </div>
         </div>
 
         <!-- Configuration Form -->
@@ -800,7 +840,13 @@
 
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>Stream URL <span class="required">*</span></label>
-                        <input type="text" id="streamUrl" placeholder="http://server:port/; (Shoutcast) or http://server:port/stream (Icecast)" required>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="streamUrl" placeholder="http://server:port/; (Shoutcast) or http://server:port/stream (Icecast)" required style="flex: 1;">
+                            <!-- NEW: Test Stream Button -->
+                            <button type="button" class="btn btn-secondary" id="testStreamBtn" onclick="testStream()" style="white-space: nowrap; padding: 10px 20px;">
+                                <i class="fas fa-play"></i> Test Stream
+                            </button>
+                        </div>
                         <span class="validation-hint">💡 Shoutcast V1: Use /; at end | Icecast/Shoutcast V2: Use /stream | Direct: Use .mp3 or .aac URL</span>
                     </div>
 
@@ -1004,7 +1050,19 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showAlert('Configuration saved successfully!', 'success');
+                    // NEW: Better success message with timestamp
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    
+                    showAlert(`✅ Configuration saved successfully at ${timeString}!`, 'success');
+                    
+                    // NEW: Show Last Saved card
+                    document.getElementById('lastSavedCard').style.display = 'block';
+                    document.getElementById('lastSaved').textContent = timeString;
                     
                     // Use the returned config directly instead of making another API call
                     if (data.config) {
@@ -1024,12 +1082,20 @@
                             minute: '2-digit'
                         });
                     }
+                    
+                    // Show warning if present
+                    if (data.warning) {
+                        setTimeout(() => {
+                            showAlert('⚠️ ' + data.warning, 'warning');
+                        }, 1000);
+                    }
                 } else {
-                    showAlert(data.error || 'Failed to save configuration', 'error');
+                    // NEW: Better error message
+                    showAlert('❌ ' + (data.error || 'Failed to save configuration. Please try again.'), 'error');
                 }
             } catch (error) {
                 console.error('Save error:', error);
-                showAlert('Network error: ' + error.message, 'error');
+                showAlert('❌ Network error: ' + error.message, 'error');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalContent;
@@ -1119,6 +1185,61 @@
                 clearInterval(listenerInterval);
             }
         }
+        
+        // NEW: Test Stream Function
+        let testAudio = null;
+        function testStream() {
+            const streamUrl = document.getElementById('streamUrl').value.trim();
+            
+            if (!streamUrl) {
+                showAlert('⚠️ Please enter a stream URL first', 'warning');
+                return;
+            }
+            
+            const testBtn = document.getElementById('testStreamBtn');
+            
+            // If already playing, stop it
+            if (testAudio) {
+                testAudio.pause();
+                testAudio = null;
+                testBtn.innerHTML = '<i class="fas fa-play"></i> Test Stream';
+                testBtn.classList.remove('btn-danger');
+                testBtn.classList.add('btn-secondary');
+                showAlert('⏹️ Stream test stopped', 'info');
+                return;
+            }
+            
+            // Start playing
+            testBtn.innerHTML = '<span class="loading-spinner"></span> Testing...';
+            testBtn.disabled = true;
+            
+            testAudio = new Audio();
+            
+            testAudio.addEventListener('canplay', () => {
+                testBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Test';
+                testBtn.disabled = false;
+                testBtn.classList.remove('btn-secondary');
+                testBtn.classList.add('btn-danger');
+                showAlert('✅ Stream is working! Playing test audio...', 'success');
+            });
+            
+            testAudio.addEventListener('error', (e) => {
+                testBtn.innerHTML = '<i class="fas fa-play"></i> Test Stream';
+                testBtn.disabled = false;
+                testBtn.classList.remove('btn-danger');
+                testBtn.classList.add('btn-secondary');
+                showAlert('❌ Stream failed to load. Check the URL and try again.', 'error');
+                testAudio = null;
+            });
+            
+            testAudio.src = streamUrl;
+            testAudio.play().catch(err => {
+                testBtn.innerHTML = '<i class="fas fa-play"></i> Test Stream';
+                testBtn.disabled = false;
+                showAlert('❌ Cannot play stream: ' + err.message, 'error');
+                testAudio = null;
+            });
+        }
 
         function logout() {
             console.log('Logging out...');
@@ -1143,14 +1264,23 @@
         function showAlert(message, type) {
             const alertBox = document.getElementById('alertBox');
             alertBox.className = `alert alert-${type} show`;
+            
+            // NEW: Better icon support for all types
+            let icon = 'exclamation-circle';
+            if (type === 'success') icon = 'check-circle';
+            else if (type === 'warning') icon = 'exclamation-triangle';
+            else if (type === 'info') icon = 'info-circle';
+            
             alertBox.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <i class="fas fa-${icon}"></i>
                 <span>${message}</span>
             `;
 
+            // Auto-hide after 5 seconds (keep errors visible longer)
+            const hideDelay = type === 'error' ? 8000 : 5000;
             setTimeout(() => {
                 alertBox.classList.remove('show');
-            }, 5000);
+            }, hideDelay);
         }
     </script>
 </body>
