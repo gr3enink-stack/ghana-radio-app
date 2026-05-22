@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +11,41 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '';
 const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID || '';
+const JWT_SECRET = process.env.JWT_SECRET || 'vasfm-secret-key-change-in-production-2026';
+
+// Rate limiting configuration
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per windowMs (for auth endpoints)
+  message: {
+    error: 'Too many attempts, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // Limit each IP to 30 requests per minute (for API endpoints)
+  message: {
+    error: 'Too many API requests, please try again later.',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Default config (used if JSONBin is not configured or fails)
 const defaultConfig = {
@@ -22,10 +59,20 @@ const defaultConfig = {
 // In-memory cache (will be loaded from JSONBin on startup)
 let currentConfig = { ...defaultConfig };
 
+// Active listeners tracking
+const activeListeners = new Map();
+
+// Config loading state
+let configLoading = true;
+let configLoadedSuccessfully = false;
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'admin')));
+
+// Apply general rate limiter to all routes
+app.use(generalLimiter);
 
 // Log startup
 console.log('🚀 VAS FM Radio Backend Starting...');
@@ -140,14 +187,60 @@ async function saveConfigToJSONBin(config) {
 let configLoaded = false;
 (async function initializeConfig() {
   try {
+    console.log('🔄 Loading configuration from JSONBin...');
     currentConfig = await loadConfigFromJSONBin();
     configLoaded = true;
-    console.log('✅ Initial config loaded');
+    configLoading = false;
+    configLoadedSuccessfully = true;
+    console.log('✅ Initial config loaded successfully');
+    console.log('📻 Station:', currentConfig.stationName);
+    console.log('📡 Stream:', currentConfig.streamUrl);
   } catch (error) {
     console.error('❌ Failed to load initial config, using defaults:', error.message);
-    configLoaded = true; // Still mark as loaded to allow requests
+    configLoaded = true;
+    configLoading = false;
+    configLoadedSuccessfully = false;
+    // Still mark as loaded to allow requests with default config
   }
 })();
+
+// Validate stream URL format
+function isValidStreamUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'Stream URL is required' };
+  }
+  
+  const trimmed = url.trim();
+  
+  // Check if it starts with http:// or https://
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return { valid: false, error: 'Stream URL must start with http:// or https://' };
+  }
+  
+  try {
+    const urlObj = new URL(trimmed);
+    
+    // Check for common issues
+    const hasProtocol = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    const hasHost = urlObj.hostname && urlObj.hostname.length > 0;
+    
+    if (!hasProtocol || !hasHost) {
+      return { valid: false, error: 'Invalid URL format' };
+    }
+    
+    // Warn about missing port and path (might be incomplete)
+    if (!urlObj.port && urlObj.pathname === '/') {
+      return { 
+        valid: true, 
+        warning: 'URL has no port or path. Consider adding /stream, /live, or /; (for Shoutcast)' 
+      };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, error: 'Invalid URL format: ' + error.message };
+  }
+}
 
 // Read configuration from memory
 function readConfig() {
@@ -165,7 +258,7 @@ async function writeConfig(config) {
 // ==================== LISTENER TRACKING ====================
 
 // Heartbeat endpoint - app calls this every 30 seconds while playing
-app.post('/api/listener/heartbeat', (req, res) => {
+app.post('/api/listener/heartbeat', apiLimiter, (req, res) => {
   const { deviceId, stationName } = req.body;
   
   if (!deviceId) {
@@ -183,7 +276,7 @@ app.post('/api/listener/heartbeat', (req, res) => {
 });
 
 // Get active listener count
-app.get('/api/listeners', (req, res) => {
+app.get('/api/listeners', apiLimiter, (req, res) => {
   try {
     const now = new Date();
     const timeout = 60 * 1000; // 1 minute timeout
@@ -217,9 +310,23 @@ app.get('/api/listeners', (req, res) => {
 // ==================== PUBLIC API ENDPOINTS ====================
 
 // Get current radio configuration (Public - for mobile app)
-app.get('/api/config', (req, res) => {
+app.get('/api/config', apiLimiter, (req, res) => {
   try {
     console.log('📱 Mobile app requesting config');
+    
+    // If config is still loading, wait briefly or return defaults
+    if (configLoading) {
+      console.log('⚠️ Config still loading, returning defaults');
+      return res.json({
+        stationName: defaultConfig.stationName,
+        streamUrl: defaultConfig.streamUrl,
+        albumArtUrl: defaultConfig.albumArtUrl,
+        description: defaultConfig.description,
+        updatedAt: defaultConfig.updatedAt,
+        loading: true
+      });
+    }
+    
     const config = readConfig();
     
     // Don't expose sensitive fields
@@ -228,7 +335,8 @@ app.get('/api/config', (req, res) => {
       streamUrl: config.streamUrl,
       albumArtUrl: config.albumArtUrl,
       description: config.description,
-      updatedAt: config.updatedAt
+      updatedAt: config.updatedAt,
+      loaded: configLoadedSuccessfully
     };
     
     console.log('📱 Config sent:', publicConfig.stationName, publicConfig.streamUrl);
@@ -241,14 +349,15 @@ app.get('/api/config', (req, res) => {
       streamUrl: defaultConfig.streamUrl,
       albumArtUrl: defaultConfig.albumArtUrl,
       description: defaultConfig.description,
-      updatedAt: defaultConfig.updatedAt
+      updatedAt: defaultConfig.updatedAt,
+      loaded: false
     });
   }
 });
 
 // ==================== ADMIN API ENDPOINTS ====================
 
-// Simple authentication middleware
+// Simple authentication middleware with JWT
 function authenticateAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
   
@@ -257,22 +366,30 @@ function authenticateAdmin(req, res, next) {
     return res.status(401).json({ error: 'No authorization header provided' });
   }
 
-  // Support Bearer token or Basic auth
   const token = authHeader.startsWith('Bearer ') 
     ? authHeader.slice(7) 
     : authHeader;
 
-  if (token !== ADMIN_PASSWORD) {
-    console.log('❌ Auth failed: Invalid password provided');
-    return res.status(403).json({ error: 'Invalid password' });
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Check if token is still valid
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+      console.log('❌ Auth failed: Token expired');
+      return res.status(403).json({ error: 'Token expired, please login again' });
+    }
+    
+    console.log('✅ Admin authentication successful (JWT verified)');
+    next();
+  } catch (error) {
+    console.log('❌ Auth failed: Invalid token');
+    return res.status(403).json({ error: 'Invalid or expired token' });
   }
-
-  console.log('✅ Admin authentication successful');
-  next();
 }
 
 // Admin login endpoint
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', strictLimiter, (req, res) => {
   const { password } = req.body;
 
   console.log('🔐 Admin login attempt');
@@ -284,9 +401,23 @@ app.post('/api/admin/login', (req, res) => {
 
   if (password === ADMIN_PASSWORD) {
     console.log('✅ Login successful');
+    
+    // Generate JWT token with 24-hour expiration
+    const token = jwt.sign(
+      { 
+        role: 'admin',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
     res.json({ 
       message: 'Login successful',
-      token: ADMIN_PASSWORD // Simple token (same as password for now)
+      token: token,
+      expiresIn: '24 hours',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     });
   } else {
     console.log('❌ Login failed: Invalid password');
@@ -295,7 +426,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Update radio configuration (Admin only)
-app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/update', strictLimiter, authenticateAdmin, async (req, res) => {
   try {
     console.log('📝 Admin update request received');
     console.log('   Request body:', req.body);
@@ -306,6 +437,18 @@ app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
     if (!streamUrl || streamUrl.trim() === '') {
       console.log('❌ Validation failed: Stream URL is required');
       return res.status(400).json({ error: 'Stream URL is required' });
+    }
+    
+    // Validate stream URL format
+    const urlValidation = isValidStreamUrl(streamUrl);
+    if (!urlValidation.valid) {
+      console.log('❌ Validation failed:', urlValidation.error);
+      return res.status(400).json({ error: urlValidation.error });
+    }
+    
+    // Log warning if present
+    if (urlValidation.warning) {
+      console.log('⚠️ URL Warning:', urlValidation.warning);
     }
 
     const currentConfig = readConfig();
@@ -327,7 +470,8 @@ app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
       console.log('✅ Configuration updated successfully');
       res.json({
         message: 'Configuration updated successfully',
-        config: newConfig
+        config: newConfig,
+        warning: urlValidation.warning || null
       });
     } else {
       console.error('❌ Failed to save configuration');
@@ -341,7 +485,7 @@ app.post('/api/admin/update', authenticateAdmin, async (req, res) => {
 });
 
 // Get current config (Admin only - for admin panel)
-app.get('/api/admin/config', authenticateAdmin, (req, res) => {
+app.get('/api/admin/config', strictLimiter, authenticateAdmin, (req, res) => {
   try {
     console.log('📋 Admin requesting current config');
     const config = readConfig();

@@ -41,6 +41,18 @@ flutter_app/.packages
 flutter_app/.flutter-plugins
 flutter_app/.flutter-plugins-dependencies
 
+# Android build artifacts
+flutter_app/android/.gradle/
+flutter_app/android/build/
+flutter_app/android/app/build/
+flutter_app/android/*.log
+flutter_app/android/app/release/
+flutter_app/android/local.properties
+
+# iOS build artifacts
+flutter_app/ios/.symlinks/
+flutter_app/ios/Flutter/ephemeral/
+
 # Android signing keys (NEVER commit these!)
 flutter_app/android/vasfm-release-key.jks
 flutter_app/android/key.properties

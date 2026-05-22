@@ -1,7 +1,7 @@
 name: internet_radio_player
 description: A production-ready Internet Radio Player mobile app
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+4
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,6 +12,7 @@ dependencies:
   
   # Audio handling
   just_audio: ^0.9.46
+  just_audio_background: ^0.0.1-beta.13
   
   # HTTP requests
   http: ^1.1.0
@@ -25,7 +26,7 @@ dependencies:
   
   # Utilities
   shared_preferences: ^2.2.2
-  connectivity_plus: ^5.0.2
+  connectivity_plus: ^6.1.5
   url_launcher: ^6.2.1
 
 dev_dependencies:

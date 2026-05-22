@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:audio_session/audio_session.dart';
 import 'screens/splash_screen.dart';
 import 'providers/radio_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize audio session for background playback
+  final session = await AudioSession.instance;
+  await session.configure(const AudioSessionConfiguration(
+    avAudioSessionCategory: AVAudioSessionCategory.playback,
+    avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
+  ));
+
+  // Initialize just_audio_background for notifications and background playback
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
+    androidNotificationChannelName: 'Radio playback',
+    androidNotificationOngoing: true,
+    androidShowNotificationBadge: true,
+  );
 
   runApp(const RadioPlayerApp());
 }

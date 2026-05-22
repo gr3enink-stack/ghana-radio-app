@@ -17,6 +17,12 @@ class RadioProvider extends ChangeNotifier {
   Duration _duration = Duration.zero;
   Timer? _heartbeatTimer;
   String? _deviceId;
+  
+  // Stream subscriptions to prevent memory leaks
+  late StreamSubscription<PlayerState> _playerStateSubscription;
+  late StreamSubscription<Duration> _positionSubscription;
+  late StreamSubscription<Duration?> _durationSubscription;
+  late StreamSubscription<ProcessingState> _processingStateSubscription;
 
   // Getters
   AudioPlayer get audioPlayer => _audioPlayer;
@@ -88,25 +94,25 @@ class RadioProvider extends ChangeNotifier {
 
   void _initPlayer() {
     // Listen to player state changes
-    _audioPlayer.playerStateStream.listen((state) {
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
       _isPlaying = state.playing;
       notifyListeners();
     });
 
     // Listen to position changes
-    _audioPlayer.positionStream.listen((position) {
+    _positionSubscription = _audioPlayer.positionStream.listen((position) {
       _position = position;
       notifyListeners();
     });
 
     // Listen to duration changes
-    _audioPlayer.durationStream.listen((duration) {
+    _durationSubscription = _audioPlayer.durationStream.listen((duration) {
       _duration = duration ?? Duration.zero;
       notifyListeners();
     });
 
     // Listen to processing state for buffering
-    _audioPlayer.processingStateStream.listen((state) {
+    _processingStateSubscription = _audioPlayer.processingStateStream.listen((state) {
       notifyListeners();
     });
   }
@@ -138,6 +144,9 @@ class RadioProvider extends ChangeNotifier {
         
         _config = RadioConfig.fromJson(data);
         
+        // Cache config locally for offline access
+        await _cacheConfig(data);
+        
         // Validate stream URL
         if (_config!.streamUrl.isEmpty) {
           _error = 'Stream URL is empty. Please configure in admin dashboard.';
@@ -147,16 +156,64 @@ class RadioProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       } else {
-        _error = 'Failed to load configuration (HTTP ${response.statusCode})';
+        // Try to load cached config
         print('❌ Error: HTTP ${response.statusCode} - ${response.body}');
+        final cachedConfig = await _loadCachedConfig();
+        if (cachedConfig != null) {
+          print('📱 Using cached config');
+          _config = cachedConfig;
+          _error = 'Using offline config. Connect to internet for updates.';
+        } else {
+          _error = 'Failed to load configuration (HTTP ${response.statusCode})';
+        }
         _isLoading = false;
         notifyListeners();
       }
     } catch (e) {
-      _error = 'Network error: Cannot connect to server. Check your internet connection.';
       print('❌ Network error: $e');
+      // Try to load cached config
+      final cachedConfig = await _loadCachedConfig();
+      if (cachedConfig != null) {
+        print('📱 Using cached config (offline mode)');
+        _config = cachedConfig;
+        _error = 'Offline mode - using cached config';
+      } else {
+        _error = 'Network error: Cannot connect to server. Check your internet connection.';
+      }
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  // Cache config to SharedPreferences for offline access
+  Future<void> _cacheConfig(Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cached_config', json.encode(data));
+      await prefs.setString('cached_config_timestamp', DateTime.now().toIso8601String());
+      print('💾 Config cached locally');
+    } catch (e) {
+      print('Error caching config: $e');
+    }
+  }
+
+  // Load cached config from SharedPreferences
+  Future<RadioConfig?> _loadCachedConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('cached_config');
+      
+      if (cachedJson != null) {
+        final data = json.decode(cachedJson);
+        final timestamp = prefs.getString('cached_config_timestamp');
+        print('📂 Loaded cached config from: $timestamp');
+        return RadioConfig.fromJson(data);
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error loading cached config: $e');
+      return null;
     }
   }
 
@@ -256,6 +313,13 @@ class RadioProvider extends ChangeNotifier {
   @override
   void dispose() {
     _stopHeartbeat();
+    
+    // Cancel all stream subscriptions to prevent memory leaks
+    _playerStateSubscription.cancel();
+    _positionSubscription.cancel();
+    _durationSubscription.cancel();
+    _processingStateSubscription.cancel();
+    
     _audioPlayer.dispose();
     super.dispose();
   }
