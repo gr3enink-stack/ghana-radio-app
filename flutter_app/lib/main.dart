@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:audio_session/audio_session.dart';
 import 'screens/splash_screen.dart';
 import 'providers/radio_provider.dart';
@@ -9,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Initialize audio session for background playback with timeout
+    // Initialize audio session for playback with timeout
     final session = await AudioSession.instance.timeout(
       const Duration(seconds: 5),
       onTimeout: () {
@@ -27,27 +26,11 @@ void main() async {
         print('⚠️ Audio session configuration timed out');
       },
     );
+    
+    print('✅ Audio session initialized successfully');
   } catch (e) {
     print('⚠️ Audio session error (continuing): $e');
     // Continue anyway - app can still work without perfect audio session
-  }
-
-  try {
-    // Initialize just_audio_background for notifications and background playback
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
-      androidNotificationChannelName: 'Radio playback',
-      androidNotificationOngoing: true,
-      androidShowNotificationBadge: true,
-    ).timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚠️ JustAudioBackground init timed out, continuing anyway');
-      },
-    );
-  } catch (e) {
-    print('⚠️ JustAudioBackground error (continuing): $e');
-    // Continue anyway - app can still work without background notifications
   }
 
   print('✅ App initialization complete, launching...');
