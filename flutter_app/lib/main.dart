@@ -8,21 +8,49 @@ import 'providers/radio_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize audio session for background playback
-  final session = await AudioSession.instance;
-  await session.configure(const AudioSessionConfiguration(
-    avAudioSessionCategory: AVAudioSessionCategory.playback,
-    avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
-  ));
+  try {
+    // Initialize audio session for background playback with timeout
+    final session = await AudioSession.instance.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ Audio session initialization timed out, continuing anyway');
+        throw Exception('Audio session timeout');
+      },
+    );
+    
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playback,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
+    )).timeout(
+      const Duration(seconds: 3),
+      onTimeout: () {
+        print('⚠️ Audio session configuration timed out');
+      },
+    );
+  } catch (e) {
+    print('⚠️ Audio session error (continuing): $e');
+    // Continue anyway - app can still work without perfect audio session
+  }
 
-  // Initialize just_audio_background for notifications and background playback
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
-    androidNotificationChannelName: 'Radio playback',
-    androidNotificationOngoing: true,
-    androidShowNotificationBadge: true,
-  );
+  try {
+    // Initialize just_audio_background for notifications and background playback
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
+      androidNotificationChannelName: 'Radio playback',
+      androidNotificationOngoing: true,
+      androidShowNotificationBadge: true,
+    ).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ JustAudioBackground init timed out, continuing anyway');
+      },
+    );
+  } catch (e) {
+    print('⚠️ JustAudioBackground error (continuing): $e');
+    // Continue anyway - app can still work without background notifications
+  }
 
+  print('✅ App initialization complete, launching...');
   runApp(const RadioPlayerApp());
 }
 
