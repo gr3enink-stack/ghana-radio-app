@@ -106,46 +106,14 @@ class AboutScreen extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 24),
             
-            // Developer Credit
+            // Version Info
             Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Developed by',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.blue.shade700,
-                          Colors.blue.shade500,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Arthium Labs Product',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Version 1.0.0',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 30),
+              child: Text(
+                'Version 1.0.0',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: 30),
                   
                   // POWERED BY ARTHIUM LABS LLC
                   Container(

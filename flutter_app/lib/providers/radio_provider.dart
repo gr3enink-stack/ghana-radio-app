@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -255,9 +256,20 @@ class RadioProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      // Set the audio source
-      await _audioPlayer.setUrl(
-        streamUrl,
+      // For radio streams with just_audio_background, we need to set the audio source
+      // with proper configuration for background playback
+      await _audioPlayer.setAudioSource(
+        AudioSource.uri(
+          Uri.parse(streamUrl),
+          tag: MediaItem(
+            id: 'vas_fm_stream',
+            title: _config!.stationName,
+            artist: 'VAS FM Online',
+            artUri: _config!.albumArtUrl.isNotEmpty
+                ? Uri.parse(_config!.albumArtUrl)
+                : null,
+          ),
+        ),
         headers: {
           'User-Agent': 'VAS FM Radio App/1.0',
           'Icy-MetaData': '1',
