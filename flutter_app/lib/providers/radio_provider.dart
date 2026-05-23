@@ -265,15 +265,11 @@ class RadioProvider extends ChangeNotifier {
             id: 'vas_fm_stream',
             title: _config!.stationName,
             artist: 'VAS FM Online',
-            artUri: _config!.albumArtUrl.isNotEmpty
-                ? Uri.parse(_config!.albumArtUrl)
+            artUri: (_config!.albumArtUrl?.isNotEmpty ?? false)
+                ? Uri.parse(_config!.albumArtUrl!)
                 : null,
           ),
         ),
-        headers: {
-          'User-Agent': 'VAS FM Radio App/1.0',
-          'Icy-MetaData': '1',
-        },
       );
       
       // Play the stream
