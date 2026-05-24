@@ -53,6 +53,19 @@ class _SplashScreenState extends State<SplashScreen> {
       // Fetch configuration with timeout
       final radioProvider = context.read<RadioProvider>();
       
+      // CRITICAL FIX: Try to load cached config FIRST for instant startup
+      print('📂 Attempting to load cached config...');
+      await radioProvider.loadCachedConfig();
+      
+      if (radioProvider.config != null) {
+        print('✅ Cached config loaded instantly');
+      } else {
+        print('⚠️ No cached config available');
+      }
+      
+      // Now fetch fresh config from API (will update cache if successful)
+      print('📡 Fetching fresh config from API...');
+      
       // Use Future.wait with timeout for better control
       await Future.wait([
         radioProvider.fetchConfig(apiUrl),

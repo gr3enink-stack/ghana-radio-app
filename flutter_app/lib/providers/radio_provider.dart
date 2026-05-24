@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/radio_config.dart';
+import '../main.dart'; // For audioHandler
 
 class RadioProvider extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -42,6 +43,23 @@ class RadioProvider extends ChangeNotifier {
   RadioProvider() {
     _initPlayer();
     _initDeviceId();
+  }
+
+  // Call this AFTER audioHandler is initialized in main()
+  void setupAudioHandlerListener() {
+    if (audioHandler != null) {
+      print('🔗 Setting up audioHandler playback state listener');
+      
+      // Reset playing state on startup (audioHandler may have stale state)
+      _isPlaying = false;
+      notifyListeners();
+      
+      audioHandler!.playbackState.listen((playbackState) {
+        print('🔊 AudioHandler playback state changed: playing=${playbackState.playing}');
+        _isPlaying = playbackState.playing;
+        notifyListeners();
+      });
+    }
   }
 
   Future<void> _initDeviceId() async {
@@ -98,7 +116,7 @@ class RadioProvider extends ChangeNotifier {
   }
 
   void _initPlayer() {
-    // Listen to player state changes
+    // Listen to player state changes (local player - for fallback)
     _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
       _isPlaying = state.playing;
       notifyListeners();
@@ -168,10 +186,11 @@ class RadioProvider extends ChangeNotifier {
       } else {
         // Try to load cached config
         print('❌ Error: HTTP ${response.statusCode} - ${response.body}');
-        final cachedConfig = await _loadCachedConfig();
-        if (cachedConfig != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedJson = prefs.getString('cached_config');
+        if (cachedJson != null) {
           print('📱 Using cached config');
-          _config = cachedConfig;
+          _config = RadioConfig.fromJson(json.decode(cachedJson));
           _error = 'Using offline config. Connect to internet for updates.';
         } else {
           _error = 'Failed to load configuration (HTTP ${response.statusCode})';
@@ -182,10 +201,11 @@ class RadioProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Network error: $e');
       // Try to load cached config
-      final cachedConfig = await _loadCachedConfig();
-      if (cachedConfig != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('cached_config');
+      if (cachedJson != null) {
         print('📱 Using cached config (offline mode)');
-        _config = cachedConfig;
+        _config = RadioConfig.fromJson(json.decode(cachedJson));
         _error = 'Offline mode - using cached config';
       } else {
         _error = 'Cannot connect to server. Please check your internet connection.';
@@ -207,8 +227,8 @@ class RadioProvider extends ChangeNotifier {
     }
   }
 
-  // Load cached config from SharedPreferences
-  Future<RadioConfig?> _loadCachedConfig() async {
+  // Load cached config from SharedPreferences (PUBLIC for splash screen)
+  Future<void> loadCachedConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedJson = prefs.getString('cached_config');
@@ -217,13 +237,11 @@ class RadioProvider extends ChangeNotifier {
         final data = json.decode(cachedJson);
         final timestamp = prefs.getString('cached_config_timestamp');
         print('📂 Loaded cached config from: $timestamp');
-        return RadioConfig.fromJson(data);
+        _config = RadioConfig.fromJson(data);
+        notifyListeners();
       }
-      
-      return null;
     } catch (e) {
       print('Error loading cached config: $e');
-      return null;
     }
   }
 
@@ -255,17 +273,27 @@ class RadioProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      // Set the audio source to the stream URL
-      await _audioPlayer.setUrl(
-        streamUrl,
-        headers: {
-          'User-Agent': 'VAS FM Radio App/1.0',
-          'Icy-MetaData': '1',
-        },
-      );
-      
-      // Play the stream
-      await _audioPlayer.play();
+      // Use audio_service for background playback
+      if (audioHandler != null) {
+        print('🔊 Using AudioService for background playback');
+        await audioHandler!.setStreamUrl(
+          streamUrl,
+          title: _config!.stationName,
+          artist: 'VAS FM Online',
+          artUrl: _config!.albumArtUrl,
+        );
+      } else {
+        // Fallback to direct player if audio_service failed to init
+        print('⚠️ AudioService not available, using direct playback');
+        await _audioPlayer.setUrl(
+          streamUrl,
+          headers: {
+            'User-Agent': 'VAS FM Radio App/1.1',
+            'Icy-MetaData': '1',
+          },
+        );
+        await _audioPlayer.play();
+      }
       
       print('✅ Playback started successfully');
       
@@ -292,7 +320,12 @@ class RadioProvider extends ChangeNotifier {
   // Pause the radio stream
   Future<void> pause() async {
     try {
-      await _audioPlayer.pause();
+      // Use audioHandler if available, otherwise use local player
+      if (audioHandler != null) {
+        await audioHandler!.pause();
+      } else {
+        await _audioPlayer.pause();
+      }
       _stopHeartbeat();
     } catch (e) {
       _error = 'Failed to pause: $e';
@@ -312,7 +345,12 @@ class RadioProvider extends ChangeNotifier {
   // Stop the radio stream
   Future<void> stop() async {
     try {
-      await _audioPlayer.stop();
+      // Use audioHandler if available, otherwise use local player
+      if (audioHandler != null) {
+        await audioHandler!.stop();
+      } else {
+        await _audioPlayer.stop();
+      }
       _stopHeartbeat();
     } catch (e) {
       _error = 'Failed to stop: $e';

@@ -1,18 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'screens/splash_screen.dart';
 import 'providers/radio_provider.dart';
+import 'services/radio_audio_handler.dart';
+
+// Global audio handler instance
+RadioAudioHandler? audioHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize audio_service for background playback
   try {
-    // Initialize audio session for playback with timeout
+    print('🔊 Initializing AudioService...');
+    audioHandler = await AudioService.init(
+      builder: () => RadioAudioHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
+        androidNotificationChannelName: 'VAS FM Radio',
+        androidNotificationOngoing: true,
+        androidShowNotificationBadge: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        fastForwardInterval: const Duration(seconds: 10),
+        rewindInterval: const Duration(seconds: 10),
+      ),
+    );
+    print('✅ AudioService initialized successfully');
+  } catch (e) {
+    print('⚠️ AudioService init failed: $e');
+  }
+
+  try {
+    // Initialize audio session for playback
     final session = await AudioSession.instance.timeout(
       const Duration(seconds: 5),
       onTimeout: () {
-        print('⚠️ Audio session initialization timed out, continuing anyway');
+        print('⚠️ Audio session initialization timed out');
         throw Exception('Audio session timeout');
       },
     );
@@ -30,7 +55,6 @@ void main() async {
     print('✅ Audio session initialized successfully');
   } catch (e) {
     print('⚠️ Audio session error (continuing): $e');
-    // Continue anyway - app can still work without perfect audio session
   }
 
   print('✅ App initialization complete, launching...');
@@ -43,7 +67,12 @@ class RadioPlayerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => RadioProvider(),
+      create: (_) {
+        final provider = RadioProvider();
+        // Setup audioHandler listener after provider is created
+        provider.setupAudioHandlerListener();
+        return provider;
+      },
       child: MaterialApp(
         title: 'VAS FM Online',
         debugShowCheckedModeBanner: false,
