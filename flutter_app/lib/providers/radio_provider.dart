@@ -41,8 +41,13 @@ class RadioProvider extends ChangeNotifier {
   Duration? get sleepTimerDuration => _sleepTimerDuration;
 
   RadioProvider() {
+    // Initialize with hardcoded config (no API dependency)
+    _config = RadioConfig.defaultConfig();
     _initPlayer();
     _initDeviceId();
+    print('✅ RadioProvider initialized with hardcoded config');
+    print('   Stream: ${_config!.streamUrl}');
+    print('   Station: ${_config!.stationName}');
   }
 
   // Call this AFTER audioHandler is initialized in main()
@@ -140,85 +145,18 @@ class RadioProvider extends ChangeNotifier {
     });
   }
 
-  // Fetch configuration from API
+  // Fetch configuration from API (DISABLED - using hardcoded config)
   Future<void> fetchConfig(String apiUrl) async {
-    _isLoading = true;
+    // HARDCODED CONFIG - no API dependency
+    // Config is already set in constructor
+    print('✅ Using hardcoded config (no API call needed)');
+    print('   Station: ${_config!.stationName}');
+    print('   Stream: ${_config!.streamUrl}');
+    print('   Album Art: ${_config!.albumArtUrl}');
+    
+    _isLoading = false;
     _error = null;
     notifyListeners();
-
-    try {
-      final url = '$apiUrl/api/config';
-      print('📡 Fetching config from: $url');
-      
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'User-Agent': 'VAS FM Radio App/1.0'},
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Request timed out. Please check your internet connection.');
-        },
-      );
-      
-      print('📥 Response status: ${response.statusCode}');
-      print('📄 Response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        print('✅ Config loaded successfully');
-        print('   Station: ${data['stationName']}');
-        print('   Stream: ${data['streamUrl']}');
-        print('   Album Art: ${data['albumArtUrl']}');
-        
-        _config = RadioConfig.fromJson(data);
-        
-        // Cache config locally for offline access
-        await _cacheConfig(data);
-        
-        // Validate stream URL
-        if (_config!.streamUrl.isEmpty) {
-          _error = 'Stream URL is empty. Please configure in admin dashboard.';
-          print('⚠️ Warning: Stream URL is empty');
-        }
-        
-        _isLoading = false;
-        notifyListeners();
-      } else {
-        // Try to load cached config
-        print('❌ Error: HTTP ${response.statusCode} - ${response.body}');
-        final prefs = await SharedPreferences.getInstance();
-        final cachedJson = prefs.getString('cached_config');
-        if (cachedJson != null) {
-          print('📱 Using cached config');
-          _config = RadioConfig.fromJson(json.decode(cachedJson));
-          _error = 'Using offline config. Connect to internet for updates.';
-        } else {
-          // FALLBACK to hardcoded defaults (guaranteed uptime)
-          print('⚠️ No cached config, using hardcoded defaults');
-          _config = RadioConfig.defaultConfig();
-          _error = null; // No error - app works with defaults
-        }
-        _isLoading = false;
-        notifyListeners();
-      }
-    } catch (e) {
-      print('❌ Network error: $e');
-      // Try to load cached config
-      final prefs = await SharedPreferences.getInstance();
-      final cachedJson = prefs.getString('cached_config');
-      if (cachedJson != null) {
-        print('📱 Using cached config (offline mode)');
-        _config = RadioConfig.fromJson(json.decode(cachedJson));
-        _error = 'Offline mode - using cached config';
-      } else {
-        // FALLBACK to hardcoded defaults (guaranteed uptime)
-        print('⚠️ No cached config, using hardcoded defaults');
-        _config = RadioConfig.defaultConfig();
-        _error = null; // No error - app works with defaults
-      }
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   // Cache config to SharedPreferences for offline access
