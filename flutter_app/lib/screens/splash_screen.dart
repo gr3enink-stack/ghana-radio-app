@@ -32,14 +32,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _initializeApp() async {
     print('🚀 Splash screen initialization started');
     
-    // Get API URL from environment or use default
-    const String apiUrl = String.fromEnvironment(
-      'API_URL',
-      defaultValue: 'https://vasfm-online.vercel.app',
-    );
-
-    print('⏱️ Waiting 1.5s for splash display...');
-    // Show splash screen for at least 1.5 seconds
+    // HARDCODED CONFIG - no API needed
+    print('✅ Using hardcoded config (standalone mode)');
+    
+    // Show splash screen for 1.5 seconds
     await Future.delayed(const Duration(milliseconds: 1500));
 
     if (!mounted) {
@@ -47,65 +43,14 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    print('📡 Starting config fetch...');
+    print('✅ Initialization complete, navigating to NowPlayingScreen');
     
-    try {
-      // Fetch configuration with timeout
-      final radioProvider = context.read<RadioProvider>();
-      
-      // CRITICAL FIX: Try to load cached config FIRST for instant startup
-      print('📂 Attempting to load cached config...');
-      await radioProvider.loadCachedConfig();
-      
-      if (radioProvider.config != null) {
-        print('✅ Cached config loaded instantly');
-      } else {
-        print('⚠️ No cached config available');
-      }
-      
-      // Now fetch fresh config from API (will update cache if successful)
-      print('📡 Fetching fresh config from API...');
-      
-      // Use Future.wait with timeout for better control
-      await Future.wait([
-        radioProvider.fetchConfig(apiUrl),
-      ]).timeout(
-        const Duration(seconds: 12),  // Slightly longer than fetchConfig's 10s
-        onTimeout: () {
-          print('⏱️ Overall initialization timed out');
-          throw Exception('Initialization timeout - config fetch took too long');
-        },
-      );
-
-      if (!mounted) {
-        print('❌ Widget unmounted after fetch, aborting navigation');
-        return;
-      }
-
-      print('✅ Config fetch completed, navigating to NowPlayingScreen');
-      // Navigate to now playing screen (even if config failed - it will show error)
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const NowPlayingScreen(),
-        ),
-      );
-    } catch (e) {
-      print('❌ Error during initialization: $e');
-      print('🔄 Forcing navigation to error screen...');
-      
-      if (!mounted) {
-        print('❌ Widget unmounted in catch block, cannot navigate');
-        return;
-      }
-      
-      // ALWAYS navigate - NowPlayingScreen will show error state
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const NowPlayingScreen(),
-        ),
-      );
-      print('✅ Navigation completed despite error');
-    }
+    // Navigate to now playing screen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const NowPlayingScreen(),
+      ),
+    );
   }
 
   @override

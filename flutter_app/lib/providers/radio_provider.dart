@@ -81,15 +81,11 @@ class RadioProvider extends ChangeNotifier {
     }
   }
 
+  // Heartbeat DISABLED - standalone app (no backend)
   void _startHeartbeat() {
-    _stopHeartbeat();
-    
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _sendHeartbeat();
-    });
-    
-    // Send first heartbeat immediately
-    _sendHeartbeat();
+    print('🔔 Heartbeat disabled (standalone mode)');
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
   }
 
   void _stopHeartbeat() {
@@ -98,26 +94,8 @@ class RadioProvider extends ChangeNotifier {
   }
 
   Future<void> _sendHeartbeat() async {
-    if (_deviceId == null || _config == null || !_isPlaying) return;
-
-    try {
-      final apiUrl = const String.fromEnvironment(
-        'API_URL',
-        defaultValue: 'https://vasfm-online.vercel.app',
-      );
-
-      await http.post(
-        Uri.parse('$apiUrl/api/listener/heartbeat'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'deviceId': _deviceId,
-          'stationName': _config!.stationName,
-          'deviceType': Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'other'),
-        }),
-      );
-    } catch (e) {
-      print('Heartbeat error: $e');
-    }
+    // DISABLED - no backend in standalone mode
+    return;
   }
 
   void _initPlayer() {

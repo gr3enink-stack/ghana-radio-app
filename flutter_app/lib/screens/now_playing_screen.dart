@@ -109,15 +109,11 @@ class _ErrorState extends StatelessWidget {
                   // Retry button
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.read<RadioProvider>().fetchConfig(
-                            const String.fromEnvironment(
-                              'API_URL',
-                              defaultValue: 'https://vasfm-online.vercel.app',
-                            ),
-                          );
+                      // Standalone mode - just restart the app
+                      print('🔄 Restarting player...');
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry Connection'),
+                    label: const Text('Restart Player'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF6A229C),
@@ -178,17 +174,11 @@ class _PlayerUIState extends State<_PlayerUI> {
       child: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            // Pull-to-refresh: reload config
-            await widget.radioProvider.fetchConfig(
-              const String.fromEnvironment(
-                'API_URL',
-                defaultValue: 'https://vasfm-online.vercel.app',
-              ),
-            );
+            // Standalone mode - no config reload needed
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('✅ Configuration refreshed'),
+                  content: Text('✅ Player refreshed (standalone mode)'),
                   duration: Duration(seconds: 2),
                 ),
               );
