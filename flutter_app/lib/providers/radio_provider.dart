@@ -193,7 +193,10 @@ class RadioProvider extends ChangeNotifier {
           _config = RadioConfig.fromJson(json.decode(cachedJson));
           _error = 'Using offline config. Connect to internet for updates.';
         } else {
-          _error = 'Failed to load configuration (HTTP ${response.statusCode})';
+          // FALLBACK to hardcoded defaults (guaranteed uptime)
+          print('⚠️ No cached config, using hardcoded defaults');
+          _config = RadioConfig.defaultConfig();
+          _error = null; // No error - app works with defaults
         }
         _isLoading = false;
         notifyListeners();
@@ -208,7 +211,10 @@ class RadioProvider extends ChangeNotifier {
         _config = RadioConfig.fromJson(json.decode(cachedJson));
         _error = 'Offline mode - using cached config';
       } else {
-        _error = 'Cannot connect to server. Please check your internet connection.';
+        // FALLBACK to hardcoded defaults (guaranteed uptime)
+        print('⚠️ No cached config, using hardcoded defaults');
+        _config = RadioConfig.defaultConfig();
+        _error = null; // No error - app works with defaults
       }
       _isLoading = false;
       notifyListeners();
