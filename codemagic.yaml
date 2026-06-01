@@ -12,6 +12,7 @@ workflows:
       cocoapods: default
       vars:
         FLUTTER_PROJECT_DIR: flutter_app
+        WORKING_DIR: flutter_app  # Monorepo: Flutter app is in subdirectory
     
     triggering:
       events:
