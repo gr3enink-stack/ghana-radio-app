@@ -3,6 +3,7 @@ workflows:
     name: VAS FM iOS Build
     max_build_duration: 45
     instance_type: mac_mini_m1
+    working_directory: flutter_app  # CRITICAL: Set working directory to Flutter app folder
     environment:
       ios_signing:
         distribution_type: app_store
@@ -10,9 +11,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      vars:
-        FLUTTER_PROJECT_DIR: flutter_app
-        WORKING_DIR: flutter_app  # Monorepo: Flutter app is in subdirectory
     
     triggering:
       events:
@@ -28,39 +26,30 @@ workflows:
         - $HOME/Library/Caches/CocoaPods
     
     scripts:
-      - name: Navigate to Flutter project
-        script: |
-          cd $FLUTTER_PROJECT_DIR
-          echo "✅ In Flutter project directory"
-      
       - name: Install Flutter dependencies
         script: |
-          cd $FLUTTER_PROJECT_DIR
           flutter pub get
           echo "✅ Flutter dependencies installed"
       
       - name: Generate app icons
         script: |
-          cd $FLUTTER_PROJECT_DIR
           flutter pub run flutter_launcher_icons
           echo "✅ App icons generated"
       
       - name: Install iOS dependencies (CocoaPods)
         script: |
-          cd $FLUTTER_PROJECT_DIR/ios
+          cd ios
           pod install
           echo "✅ CocoaPods dependencies installed"
       
       - name: Verify iOS configuration
         script: |
-          cd $FLUTTER_PROJECT_DIR
           echo "📋 Checking iOS configuration..."
           flutter doctor -v
           echo "✅ Configuration verified"
       
       - name: Build iOS IPA for App Store
         script: |
-          cd $FLUTTER_PROJECT_DIR
           echo "🚀 Building iOS IPA..."
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist \
@@ -69,8 +58,8 @@ workflows:
           echo "✅ IPA build complete"
     
     artifacts:
-      - $FLUTTER_PROJECT_DIR/build/ios/ipa/*.ipa
-      - $FLUTTER_PROJECT_DIR/build/ios/archive/Runner.xcarchive
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/Runner.xcarchive
       - /tmp/xcodebuild_logs/*.log
     
     publishing:
