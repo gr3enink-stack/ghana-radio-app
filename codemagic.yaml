@@ -1,0 +1,96 @@
+workflows:
+  ios-build:
+    name: VAS FM iOS Build
+    max_build_duration: 45
+    instance_type: mac_mini_m1
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.arthiumlabs.vasfm
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        FLUTTER_PROJECT_DIR: flutter_app
+    
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+    
+    scripts:
+      - name: Navigate to Flutter project
+        script: |
+          cd $FLUTTER_PROJECT_DIR
+          echo "✅ In Flutter project directory"
+      
+      - name: Install Flutter dependencies
+        script: |
+          cd $FLUTTER_PROJECT_DIR
+          flutter pub get
+          echo "✅ Flutter dependencies installed"
+      
+      - name: Generate app icons
+        script: |
+          cd $FLUTTER_PROJECT_DIR
+          flutter pub run flutter_launcher_icons
+          echo "✅ App icons generated"
+      
+      - name: Install iOS dependencies (CocoaPods)
+        script: |
+          cd $FLUTTER_PROJECT_DIR/ios
+          pod install
+          echo "✅ CocoaPods dependencies installed"
+      
+      - name: Verify iOS configuration
+        script: |
+          cd $FLUTTER_PROJECT_DIR
+          echo "📋 Checking iOS configuration..."
+          flutter doctor -v
+          echo "✅ Configuration verified"
+      
+      - name: Build iOS IPA for App Store
+        script: |
+          cd $FLUTTER_PROJECT_DIR
+          echo "🚀 Building iOS IPA..."
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --build-name=1.1.0 \
+            --build-number=$(($BUILD_NUMBER + 14))
+          echo "✅ IPA build complete"
+    
+    artifacts:
+      - $FLUTTER_PROJECT_DIR/build/ios/ipa/*.ipa
+      - $FLUTTER_PROJECT_DIR/build/ios/archive/Runner.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+    
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+      
+      # Optional: Auto-upload to App Store Connect
+      # Uncomment and configure when ready to submit
+      # app_store_connect:
+      #   api_key: $APP_STORE_CONNECT_API_KEY
+      #   submit_to_app_store: false  # Set to true for auto-submission
+      #   copyright: © 2026 Media VAS. All rights reserved.
+    
+    # Optional: Slack/Discord notifications
+    # slack:
+    #   channel: '#builds'
+    #   notify_on_build_start: true
+    #   notify:
+    #     - success
+    #     - failure

@@ -18,11 +18,14 @@ void main() async {
     audioHandler = await AudioService.init(
       builder: () => RadioAudioHandler(),
       config: AudioServiceConfig(
+        // Android configuration
         androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
         androidNotificationChannelName: 'VAS FM Radio',
         androidNotificationOngoing: true,
         androidShowNotificationBadge: true,
         androidNotificationIcon: 'mipmap/ic_launcher',
+        // iOS configuration
+        artDownscaleWidth: 128,  // Downscale album art for iOS notification
         fastForwardInterval: const Duration(seconds: 10),
         rewindInterval: const Duration(seconds: 10),
       ),
