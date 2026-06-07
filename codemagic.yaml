@@ -71,10 +71,12 @@ workflows:
       
       # Auto-upload to App Store Connect
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_KEY_ID
+        apple_id: $APPLE_ID_EMAIL
+        password: $APP_STORE_CONNECT_PASSWORD
+        api_key: $APP_STORE_CONNECT_KEY_CONTENT
         api_key_id: $APP_STORE_CONNECT_KEY_ID
         api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_app_store: true  # Auto-submit for review
+        submit_to_app_store: false  # Manual submission (set true for auto)
         copyright: © 2026 Media VAS. All rights reserved.
     
     # Optional: Slack/Discord notifications
