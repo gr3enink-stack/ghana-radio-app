@@ -7,12 +7,21 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/radio_config.dart';
 import '../main.dart'; // For audioHandler
+import '../utils/performance_monitor.dart'; // Performance tracking
+
+// Helper for debug-only logging
+void _debugLog(String message) {
+  if (kDebugMode) {
+    print(message);
+  }
+}
 
 class RadioProvider extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
   RadioConfig? _config;
   bool _isLoading = false;
   bool _isPlaying = false;
+  bool _isUserInitiatedPlay = false; // Track if user pressed play
   String? _error;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -21,6 +30,11 @@ class RadioProvider extends ChangeNotifier {
   Timer? _sleepTimer;
   Duration? _sleepTimerDuration;
   bool _isSleepTimerActive = false;
+  
+  // Performance metrics
+  DateTime? _playButtonPressedTime;
+  DateTime? _streamPreparedTime;
+  Duration? _lastStartupLatency;
   
   // Stream subscriptions to prevent memory leaks
   late StreamSubscription<PlayerState> _playerStateSubscription;
@@ -36,9 +50,12 @@ class RadioProvider extends ChangeNotifier {
   String? get error => _error;
   Duration get position => _position;
   Duration get duration => _duration;
-  bool get isBuffering => _audioPlayer.processingState == ProcessingState.buffering;
+  bool get isBuffering => _audioPlayer.processingState == ProcessingState.buffering || 
+                          _audioPlayer.processingState == ProcessingState.loading;
   bool get isSleepTimerActive => _isSleepTimerActive;
   Duration? get sleepTimerDuration => _sleepTimerDuration;
+  bool get isUserInitiatedPlay => _isUserInitiatedPlay;
+  Duration? get lastStartupLatency => _lastStartupLatency;
 
   RadioProvider() {
     // Initialize with hardcoded config (no API dependency)
@@ -61,7 +78,16 @@ class RadioProvider extends ChangeNotifier {
       
       audioHandler!.playbackState.listen((playbackState) {
         print('🔊 AudioHandler playback state changed: playing=${playbackState.playing}');
+        
+        final wasPlaying = _isPlaying;
         _isPlaying = playbackState.playing;
+        
+        // Clear user-initiated play flag when audio actually starts playing
+        if (!wasPlaying && _isPlaying) {
+          print('✅ Playback confirmed - clearing loading state');
+          _isUserInitiatedPlay = false;
+        }
+        
         notifyListeners();
       });
     }
@@ -190,9 +216,18 @@ class RadioProvider extends ChangeNotifier {
     }
 
     print('🎵 Attempting to play: $streamUrl');
+    
+    // Performance tracking: Record when user pressed play
+    _playButtonPressedTime = DateTime.now();
+    final perfTimer = PerformanceTimer(
+      'playback_startup',
+      label: 'User tap to audio playback',
+    );
+    _debugLog('⏱️ [PERF] Play button pressed at: ${_playButtonPressedTime!.toIso8601String()}');
 
     try {
       _error = null;
+      _isUserInitiatedPlay = true; // Set flag for immediate UI feedback
       notifyListeners();
 
       // Use audio_service for background playback
@@ -217,7 +252,31 @@ class RadioProvider extends ChangeNotifier {
         await _audioPlayer.play();
       }
       
+      // Performance tracking: Calculate startup latency
+      if (_playButtonPressedTime != null) {
+        final playbackStartTime = DateTime.now();
+        _lastStartupLatency = playbackStartTime.difference(_playButtonPressedTime!);
+        _debugLog('⏱️ [PERF] Playback started at: ${playbackStartTime.toIso8601String()}');
+        _debugLog('⏱️ [PERF] ⚡ Startup latency: ${_lastStartupLatency!.inMilliseconds}ms');
+        
+        // Record in performance monitor (debug only)
+        perfTimer.stop();
+        
+        // Performance rating
+        if (_lastStartupLatency!.inMilliseconds < 1000) {
+          _debugLog('⭐ [PERF] Rating: EXCELLENT (<1s)');
+        } else if (_lastStartupLatency!.inMilliseconds < 2000) {
+          _debugLog('⭐ [PERF] Rating: GOOD (1-2s)');
+        } else if (_lastStartupLatency!.inMilliseconds < 3000) {
+          _debugLog('⭐ [PERF] Rating: ACCEPTABLE (2-3s)');
+        } else {
+          _debugLog('⚠️ [PERF] Rating: SLOW (>3s) - Consider optimization');
+        }
+      }
+      
       print('✅ Playback started successfully');
+      _isUserInitiatedPlay = false; // Clear flag once playback starts
+      notifyListeners();
       
       // Start listener tracking
       _startHeartbeat();
@@ -225,17 +284,73 @@ class RadioProvider extends ChangeNotifier {
       // just_audio specific errors
       print('❌ Player error: ${e.message}');
       _error = 'Failed to play stream: ${e.message}';
+      _isUserInitiatedPlay = false;
+      
+      if (_playButtonPressedTime != null) {
+        final errorTime = DateTime.now();
+        final errorLatency = errorTime.difference(_playButtonPressedTime!);
+        _debugLog('⏱️ [PERF] Error after ${errorLatency.inMilliseconds}ms: ${e.message}');
+        
+        // Record failed attempt (debug only)
+        if (kDebugMode) {
+          PerformanceMonitor().recordMetric(
+            action: 'playback_error',
+            duration: errorLatency,
+            label: 'Player exception',
+            metadata: {'error': e.message},
+          );
+        }
+      }
+      
       notifyListeners();
     } on SocketException catch (e) {
       // Network errors
       print('❌ Network error: ${e.message}');
       _error = 'Network error: Cannot reach stream server. Check your internet connection.';
+      _isUserInitiatedPlay = false;
+      
+      if (_playButtonPressedTime != null) {
+        final errorTime = DateTime.now();
+        final errorLatency = errorTime.difference(_playButtonPressedTime!);
+        _debugLog('⏱️ [PERF] Network error after ${errorLatency.inMilliseconds}ms');
+        
+        // Record failed attempt (debug only)
+        if (kDebugMode) {
+          PerformanceMonitor().recordMetric(
+            action: 'playback_error',
+            duration: errorLatency,
+            label: 'Network error',
+            metadata: {'error': e.message},
+          );
+        }
+      }
+      
       notifyListeners();
     } catch (e) {
       // Generic errors
       print('❌ Error: $e');
       _error = 'Failed to play stream: $e';
+      _isUserInitiatedPlay = false;
+      
+      if (_playButtonPressedTime != null) {
+        final errorTime = DateTime.now();
+        final errorLatency = errorTime.difference(_playButtonPressedTime!);
+        _debugLog('⏱️ [PERF] Error after ${errorLatency.inMilliseconds}ms: $e');
+        
+        // Record failed attempt (debug only)
+        if (kDebugMode) {
+          PerformanceMonitor().recordMetric(
+            action: 'playback_error',
+            duration: errorLatency,
+            label: 'Generic error',
+            metadata: {'error': e.toString()},
+          );
+        }
+      }
+      
       notifyListeners();
+    } finally {
+      _playButtonPressedTime = null; // Reset tracking
     }
   }
 
@@ -304,6 +419,50 @@ class RadioProvider extends ChangeNotifier {
     _sleepTimerDuration = null;
     notifyListeners();
     print('⏰ Sleep timer stopped');
+  }
+  
+  // Pre-buffer the stream for instant playback
+  Future<void> preBuffer() async {
+    if (_config == null || _config!.streamUrl.isEmpty) {
+      return;
+    }
+    
+    try {
+      final preBufferStartTime = DateTime.now();
+      _debugLog('🔊 Pre-buffering stream...');
+      
+      final perfTimer = PerformanceTimer(
+        'pre_buffering',
+        label: 'Stream pre-buffering during splash',
+      );
+      
+      if (audioHandler != null) {
+        await audioHandler!.prepareStream(
+          _config!.streamUrl,
+          title: _config!.stationName,
+          artist: 'VAS FM Online',
+          artUrl: _config!.albumArtUrl,
+        );
+        
+        final preBufferEndTime = DateTime.now();
+        final preBufferDuration = preBufferEndTime.difference(preBufferStartTime);
+        _debugLog('⏱️ [PERF] Pre-buffering completed in: ${preBufferDuration.inMilliseconds}ms');
+        _streamPreparedTime = preBufferEndTime;
+        
+        // Record in performance monitor (debug only)
+        if (kDebugMode) {
+          perfTimer.stop();
+        }
+        
+        if (preBufferDuration.inMilliseconds < 1500) {
+          _debugLog('⭐ [PERF] Pre-buffer: FAST (<1.5s) - Stream ready for instant playback');
+        } else {
+          _debugLog('⚠️ [PERF] Pre-buffer: SLOW (>1.5s) - May impact user experience');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Pre-buffering failed (non-critical): $e');
+    }
   }
   
   @override

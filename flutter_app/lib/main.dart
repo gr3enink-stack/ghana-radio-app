@@ -18,21 +18,23 @@ void main() async {
     audioHandler = await AudioService.init(
       builder: () => RadioAudioHandler(),
       config: AudioServiceConfig(
-        // Android configuration
+        // Android configuration - EXACTLY as it was when working
         androidNotificationChannelId: 'com.arthiumlabs.radio.channel.audio',
         androidNotificationChannelName: 'VAS FM Radio',
         androidNotificationOngoing: true,
         androidShowNotificationBadge: true,
-        androidNotificationIcon: 'mipmap/ic_launcher',
-        // iOS configuration
-        artDownscaleWidth: 128,  // Downscale album art for iOS notification
+        androidNotificationIcon: 'mipmap/ic_launcher', // BACK TO ORIGINAL
+        // iOS configuration - MUST set BOTH width and height or neither
+        artDownscaleWidth: 128,
+        artDownscaleHeight: 128, // ADDED - required when width is set!
         fastForwardInterval: const Duration(seconds: 10),
         rewindInterval: const Duration(seconds: 10),
       ),
     );
-    print('✅ AudioService initialized successfully');
+    print('✅ AudioService initialized successfully - background playback ENABLED');
   } catch (e) {
     print('⚠️ AudioService init failed: $e');
+    // Don't set to null - keep whatever value it had
   }
 
   try {

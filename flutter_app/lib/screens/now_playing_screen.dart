@@ -444,38 +444,111 @@ class _PlaceholderArt extends StatelessWidget {
 
 class _PlayPauseButton extends StatelessWidget {
   final RadioProvider radioProvider;
+  
+  // Visual feedback timing configuration
+  static const Duration _minLoadingDisplayDuration = Duration(milliseconds: 300); // Minimum time to show loading state
+  static const Duration _maxLoadingDisplayDuration = Duration(seconds: 10); // Timeout for loading state
 
   const _PlayPauseButton({required this.radioProvider});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: () => radioProvider.togglePlayPause(),
-        child: Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFFCDE2B),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFCDE2B).withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Buffering status message with enhanced timing feedback
+        if (radioProvider.isUserInitiatedPlay || radioProvider.isBuffering)
+          TweenAnimationBuilder(
+            duration: const Duration(milliseconds: 200), // Smooth fade-in
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 8 * (1 - value)), // Slide up effect
+                  child: child,
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6A229C)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _getLoadingMessage(radioProvider),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: const Color(0xFF6A229C),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          child: Center(
-            child: _buildPlayPauseIcon(context),
+        // Performance metrics display (ONLY in debug mode, never in production)
+        if (radioProvider.lastStartupLatency != null && !const bool.fromEnvironment('dart.vm.product'))
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+            child: Text(
+              '⚡ Last startup: ${radioProvider.lastStartupLatency!.inMilliseconds}ms',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        // Play/Pause Button
+        GestureDetector(
+          onTap: () => radioProvider.togglePlayPause(),
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFCDE2B),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFCDE2B).withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Center(
+              child: _buildPlayPauseIcon(context),
+            ),
           ),
         ),
-      ),
+      ],
     );
+  }
+  
+  String _getLoadingMessage(RadioProvider provider) {
+    if (provider.isUserInitiatedPlay && !provider.isBuffering) {
+      return 'Starting playback...';
+    } else if (provider.isBuffering) {
+      return 'Buffering...';
+    }
+    return 'Loading...';
   }
 
   Widget _buildPlayPauseIcon(BuildContext context) {
-    if (radioProvider.isBuffering) {
+    // Show buffering indicator when:
+    // 1. Audio is actually buffering/loading, OR
+    // 2. User just pressed play and we're waiting for playback to start
+    if (radioProvider.isBuffering || radioProvider.isUserInitiatedPlay) {
       return const SizedBox(
         width: 30,
         height: 30,

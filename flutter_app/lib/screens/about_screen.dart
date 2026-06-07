@@ -109,7 +109,7 @@ class AboutScreen extends StatelessWidget {
             // Version Info
             Center(
               child: Text(
-                'Version 1.0.0',
+                'Version 1.1.0',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),

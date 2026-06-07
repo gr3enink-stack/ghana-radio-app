@@ -5,9 +5,8 @@ workflows:
     instance_type: mac_mini_m1
     working_directory: flutter_app  # CRITICAL: Set working directory to Flutter app folder
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.arthiumlabs.vasfm
+      # iOS signing configured in Codemagic UI (Code signing identities tab)
+      # Don't use automatic signing - it fails with App Store Connect API
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -65,17 +64,18 @@ workflows:
     publishing:
       email:
         recipients:
-          - your-email@example.com
+          - your-email@example.com  # UPDATE WITH YOUR EMAIL
         notify:
           success: true
           failure: true
       
-      # Optional: Auto-upload to App Store Connect
-      # Uncomment and configure when ready to submit
-      # app_store_connect:
-      #   api_key: $APP_STORE_CONNECT_API_KEY
-      #   submit_to_app_store: false  # Set to true for auto-submission
-      #   copyright: © 2026 Media VAS. All rights reserved.
+      # Auto-upload to App Store Connect
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_KEY_ID
+        api_key_id: $APP_STORE_CONNECT_KEY_ID
+        api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_app_store: true  # Auto-submit for review
+        copyright: © 2026 Media VAS. All rights reserved.
     
     # Optional: Slack/Discord notifications
     # slack:

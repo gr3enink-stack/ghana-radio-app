@@ -42,6 +42,10 @@ class _SplashScreenState extends State<SplashScreen> {
       print('❌ Widget unmounted during delay, aborting');
       return;
     }
+    
+    // Pre-buffer the stream in the background for faster playback
+    final radioProvider = Provider.of<RadioProvider>(context, listen: false);
+    radioProvider.preBuffer();
 
     print('✅ Initialization complete, navigating to NowPlayingScreen');
     
