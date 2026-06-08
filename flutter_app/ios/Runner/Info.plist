@@ -73,6 +73,10 @@
 		<string>audio</string>
 	</array>
 	
+	<!-- Privacy Usage Descriptions (Required by Apple) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app does not access the microphone. This permission is required by audio playback libraries used for streaming radio content.</string>
+	
 	<!-- App Transport Security - Allow HTTP for radio stream -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
