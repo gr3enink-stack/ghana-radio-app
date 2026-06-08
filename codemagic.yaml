@@ -53,7 +53,7 @@ workflows:
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist \
             --build-name=1.1.0 \
-            --build-number=$(($BUILD_NUMBER + 14))
+            --build-number=16
           echo "✅ IPA build complete"
     
     artifacts:
