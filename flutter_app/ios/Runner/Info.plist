@@ -76,6 +76,18 @@
 	<!-- Privacy Usage Descriptions (Required by Apple) -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app does not access the microphone. This permission is required by audio playback libraries used for streaming radio content.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect to wireless headphones, speakers, and CarPlay for audio playback.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app connects to Bluetooth audio devices for streaming radio content.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app does not access your location. Location services are not required for radio streaming.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app does not use the camera. Camera access is not required for radio streaming.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app does not access your photo library. Photo access is not required.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app does not save photos. Photo library access is not required.</string>
 	
 	<!-- App Transport Security - Allow HTTP for radio stream -->
 	<key>NSAppTransportSecurity</key>
