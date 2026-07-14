@@ -432,10 +432,21 @@ class _PlaceholderArt extends StatelessWidget {
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Center(
-        child: Icon(
-          Icons.music_note,
-          size: 100,
-          color: const Color(0xFF6A229C).withOpacity(0.5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.asset(
+            'assets/logo-512.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(
+                Icons.music_note,
+                size: 100,
+                color: const Color(0xFF6A229C).withOpacity(0.5),
+              );
+            },
+          ),
         ),
       ),
     );

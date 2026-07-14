@@ -1,16 +1,17 @@
 workflows:
   ios-build:
     name: VAS FM iOS Build
-    max_build_duration: 45
+    max_build_duration: 60
     instance_type: mac_mini_m1
-    working_directory: flutter_app  # CRITICAL: Set working directory to Flutter app folder
+    working_directory: flutter_app
     environment:
-      # iOS signing configured in Codemagic UI (Code signing identities tab)
-      # Don't use automatic signing - it fails with App Store Connect API
       flutter: stable
       xcode: latest
       cocoapods: default
-    
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.arthiumlabs.vasfm
+
     triggering:
       events:
         - push
@@ -18,71 +19,108 @@ workflows:
         - pattern: 'main'
           include: true
           source: true
-    
+
     cache:
       cache_paths:
         - $FLUTTER_ROOT/.pub-cache
         - $HOME/Library/Caches/CocoaPods
-    
+
     scripts:
       - name: Install Flutter dependencies
         script: |
           flutter pub get
-          echo "✅ Flutter dependencies installed"
-      
+
       - name: Generate app icons
         script: |
-          flutter pub run flutter_launcher_icons
-          echo "✅ App icons generated"
-      
+          dart run flutter_launcher_icons
+
       - name: Install iOS dependencies (CocoaPods)
         script: |
           cd ios
           pod install
-          echo "✅ CocoaPods dependencies installed"
-      
+
       - name: Verify iOS configuration
         script: |
-          echo "📋 Checking iOS configuration..."
           flutter doctor -v
-          echo "✅ Configuration verified"
-      
+
       - name: Build iOS IPA for App Store
         script: |
-          echo "🚀 Building iOS IPA..."
           flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist \
             --build-name=1.1.0 \
             --build-number=17
-          echo "✅ IPA build complete"
-    
+
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/Runner.xcarchive
       - /tmp/xcodebuild_logs/*.log
-    
+
     publishing:
+      app_store_connect:
+        # Uses App Store Connect API key configured in Codemagic Team Settings
+        submit_to_app_store: true
+        copyright: "© 2026 Media VAS. All rights reserved."
+
+  android-build:
+    name: VAS FM Android Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    working_directory: flutter_app
+    environment:
+      flutter: stable
+      # Android signing via environment variables (configure in Codemagic UI):
+      #   CM_KEYSTORE_BASE64, CM_KEYSTORE_PASSWORD, CM_KEY_PASSWORD, CM_KEY_ALIAS
+      vars:
+        CM_KEYSTORE_PATH: /tmp/keystore.jks
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          flutter pub get
+
+      - name: Generate app icons
+        script: |
+          dart run flutter_launcher_icons
+
+      - name: Set up Android keystore
+        script: |
+          # Decode keystore from Codemagic environment variable (base64 encoded)
+          echo $CM_KEYSTORE_BASE64 | base64 --decode > $CM_KEYSTORE_PATH
+
+          # Write key.properties for Gradle to use
+          cat > android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_KEYSTORE_PATH
+          EOF
+
+      - name: Build Android AAB
+        script: |
+          flutter build appbundle --release \
+            --build-name=1.1.0 \
+            --build-number=17
+
+    artifacts:
+      - build/app/outputs/bundle/release/app-release.aab
+
+    publishing:
+      # Google Play publishing will be added once Play Console is set up
+      # For now, download the AAB from build artifacts
       email:
         recipients:
           - your-email@example.com  # UPDATE WITH YOUR EMAIL
         notify:
           success: true
           failure: true
-      
-      # Auto-upload to App Store Connect
-      app_store_connect:
-        apple_id: $APPLE_ID_EMAIL
-        password: $APP_STORE_CONNECT_PASSWORD
-        api_key: $APP_STORE_CONNECT_KEY_CONTENT
-        api_key_id: $APP_STORE_CONNECT_KEY_ID
-        api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_app_store: false  # Manual submission (set true for auto)
-        copyright: © 2026 Media VAS. All rights reserved.
-    
-    # Optional: Slack/Discord notifications
-    # slack:
-    #   channel: '#builds'
-    #   notify_on_build_start: true
-    #   notify:
-    #     - success
-    #     - failure
