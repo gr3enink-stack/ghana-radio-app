@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'privacy_policy_screen.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -187,14 +188,14 @@ class AboutScreen extends StatelessWidget {
                         context,
                         icon: Icons.shield_outlined,
                         label: 'Privacy Policy',
-                        url: 'https://vasfm-online.vercel.app/privacy',
+                        inAppScreen: const PrivacyPolicyScreen(),
                       ),
                       const SizedBox(width: 16),
                       _buildLegalButton(
                         context,
                         icon: Icons.gavel,
                         label: 'Terms of Service',
-                        url: 'https://vasfm-online.vercel.app/terms',
+                        url: 'https://gr3enink-stack.github.io/ghana-radio-app/terms-of-service.html',
                       ),
                     ],
                   ),
@@ -230,18 +231,25 @@ class AboutScreen extends StatelessWidget {
   Widget _buildLegalButton(BuildContext context, {
     required IconData icon,
     required String label,
-    required String url,
+    String? url,
+    Widget? inAppScreen,
   }) {
     return OutlinedButton.icon(
       onPressed: () async {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not open $label')),
-            );
+        if (inAppScreen != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => inAppScreen),
+          );
+        } else if (url != null) {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not open $label')),
+              );
+            }
           }
         }
       },
