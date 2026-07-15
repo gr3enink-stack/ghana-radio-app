@@ -46,7 +46,7 @@ workflows:
       - name: Build iOS IPA for App Store
         script: |
           flutter build ipa --release \
-            --build-name=1.1.0 \
+            --build-name=1.2.0 \
             --build-number=18
 
     artifacts:
@@ -109,7 +109,7 @@ workflows:
       - name: Build Android AAB
         script: |
           flutter build appbundle --release \
-            --build-name=1.1.0 \
+            --build-name=1.2.0 \
             --build-number=18
 
     artifacts:
